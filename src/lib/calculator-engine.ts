@@ -1,20 +1,15 @@
-export interface SelectOption {
-  label: string;
-  value: number;
-}
-
 export interface CalculatorInput {
   id: string;
   variable: string;
-  type: 'slider' | 'number' | 'select';
   label: string;
-  defaultValue: number;
+  type: 'slider' | 'number' | 'select';
+  defaultValue?: number;
   min?: number;
   max?: number;
   step?: number;
   prefix?: string;
   suffix?: string;
-  options?: SelectOption[];
+  options?: { label: string; value: number }[];
 }
 
 export interface CalculatorOutput {
@@ -28,52 +23,36 @@ export interface CalculatorOutput {
 }
 
 /**
- * Interprete matematico avanzato:
- * Supporta variabili, operatori (+, -, *, /, %), comparazioni (>, <, >=, <=, ==, !=),
- * logica condizionale ternaria (a > b ? x : y) e funzioni Math (min, max, round, floor, ceil, abs).
+ * Valuta in sicurezza un'espressione matematica sostituendo i valori delle variabili
  */
-export function evaluateOutputs(
-  outputs: CalculatorOutput[],
-  inputsValues: Record<string, number>
-): Record<string, number> {
-  const results: Record<string, number> = { ...inputsValues };
+export function evaluateFormula(
+  formula: string,
+  values: Record<string, number>
+): number {
+  if (!formula || typeof formula !== 'string') return 0;
 
-  outputs.forEach((out) => {
-    try {
-      let expression = out.formula;
+  try {
+    let sanitized = formula.trim();
 
-      // Sostituisce funzioni matematiche comuni con la controparte Math.*
-      expression = expression
-        .replace(/\bmin\(/g, 'Math.min(')
-        .replace(/\bmax\(/g, 'Math.max(')
-        .replace(/\bround\(/g, 'Math.round(')
-        .replace(/\bfloor\(/g, 'Math.floor(')
-        .replace(/\bceil\(/g, 'Math.ceil(')
-        .replace(/\babs\(/g, 'Math.abs(');
-
-      // Sostituisce le variabili con i valori correnti (dalla più lunga alla più corta per evitare sovrapposizioni)
-      const sortedKeys = Object.keys(results).sort((a, b) => b.length - a.length);
-      for (const key of sortedKeys) {
-        const regex = new RegExp(`\\b${key}\\b`, 'g');
-        expression = expression.replace(regex, (results[key] ?? 0).toString());
-      }
-
-      // Validazione caratteri consentiti (numeri, operatori, logica ternaria e Math)
-      const isValid = /^[\d+\-*/().?:><=!&|,\s]|Math\.(min|max|round|floor|ceil|abs)+$/.test(expression);
-
-      if (isValid) {
-        // eslint-disable-next-line no-new-func
-        const calculatedValue = Function(`"use strict"; return (${expression})`)();
-        results[out.variable] = typeof calculatedValue === 'number' && !isNaN(calculatedValue)
-          ? Math.round(calculatedValue * 100) / 100
-          : 0;
-      } else {
-        results[out.variable] = 0;
-      }
-    } catch {
-      results[out.variable] = 0;
+    // Sostituisce le variabili ordinate per lunghezza decrescente per evitare conflitti
+    const sortedKeys = Object.keys(values).sort((a, b) => b.length - a.length);
+    for (const key of sortedKeys) {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      sanitized = sanitized.replace(regex, String(values[key] ?? 0));
     }
-  });
 
-  return results;
+    // Consente solo cifre, operatori aritmetici, parentesi e logica ternaria base
+    if (!/^[0-9+\-*/().?:><=! \t]+$/.test(sanitized)) {
+      return 0;
+    }
+
+    // Valutazione matematica isolata
+    const fn = new Function(`"use strict"; return (${sanitized});`);
+    const result = fn();
+    const num = Number(result);
+
+    return isNaN(num) || !isFinite(num) ? 0 : num;
+  } catch {
+    return 0;
+  }
 }
