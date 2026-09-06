@@ -90,7 +90,7 @@ function Mark({ className = 'text-accent', size = 20 }: IconProps & { className?
 
 /* ==========================================================================
    HOOKS
-   ========================================================================== */
+   ========================================================================= */
 
 function useReveal<T extends HTMLElement>(threshold = 0.12) {
   const ref = useRef<T | null>(null);
@@ -581,7 +581,7 @@ function Header() {
             <Link href="/login" className="btn btn-ghost btn-sm">
               Accedi
             </Link>
-            <Link href="/login" className="btn btn-primary btn-sm">
+            <Link href="/login?mode=signup" className="btn btn-primary btn-sm">
               Inizia gratis
               <IconArrowUpRight />
             </Link>
@@ -618,7 +618,7 @@ function Header() {
             <Link href="/login" className="btn btn-ghost btn-sm flex-1" onClick={() => setOpen(false)}>
               Accedi
             </Link>
-            <Link href="/login" className="btn btn-primary btn-sm flex-1" onClick={() => setOpen(false)}>
+            <Link href="/login?mode=signup" className="btn btn-primary btn-sm flex-1" onClick={() => setOpen(false)}>
               Inizia gratis
             </Link>
           </div>
@@ -665,7 +665,7 @@ function Hero() {
 
         <div className="anim-fade-up mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5"
           style={{ animationDelay: '240ms' }}>
-          <Link href="/login" className="btn btn-primary w-full sm:w-auto !px-8 !py-4">
+          <Link href="/login?mode=signup" className="btn btn-primary w-full sm:w-auto !px-8 !py-4">
             Inizia ora — piano free
             <IconArrowUpRight />
           </Link>
@@ -1122,7 +1122,7 @@ function FinalCta() {
               qualificato. Tutta l’operazione richiede meno di un caffè.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <Link href="/login" className="btn btn-primary w-full sm:w-auto !px-8 !py-4">
+              <Link href="/login?mode=signup" className="btn btn-primary w-full sm:w-auto !px-8 !py-4">
                 Crea il primo calcolatore
                 <IconArrowUpRight />
               </Link>
@@ -1182,7 +1182,7 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-[13px] text-muted hover:text-ink transition-colors">
+                <Link href="/login?mode=signup" className="text-[13px] text-muted hover:text-ink transition-colors">
                   Crea un account
                 </Link>
               </li>
