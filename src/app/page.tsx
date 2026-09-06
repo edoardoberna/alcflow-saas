@@ -5,7 +5,7 @@ import Link from 'next/link';
 import CalculatorPreview from '@/components/CalculatorPreview';
 
 /* ==========================================================================
-   ICONE INLINE
+   ICONE INLINE — Zero dipendenze esterne
    ========================================================================== */
 
 type IconProps = { className?: string; size?: number };
@@ -22,22 +22,22 @@ const base = (size: number) => ({
   'aria-hidden': true as const
 });
 
-const IconArrowUpRight = ({ className, size = 11 }: IconProps) => (
+const IconArrowUpRight = ({ className, size = 12 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="M5 15 15 5M7 5h8v8" /></svg>
 );
-const IconChevronDown = ({ className, size = 12 }: IconProps) => (
+const IconChevronDown = ({ className, size = 14 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m5 8 5 5 5-5" /></svg>
 );
-const IconCheck = ({ className, size = 12 }: IconProps) => (
+const IconCheck = ({ className, size = 13 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m4 10.5 4 4 8-9" /></svg>
 );
-const IconX = ({ className, size = 12 }: IconProps) => (
+const IconX = ({ className, size = 13 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m5 5 10 10M15 5 5 15" /></svg>
 );
-const IconMenu = ({ className, size = 20 }: IconProps) => (
+const IconMenu = ({ className, size = 22 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="M3 6h14M3 10h14M3 14h14" /></svg>
 );
-const IconClose = ({ className, size = 20 }: IconProps) => (
+const IconClose = ({ className, size = 22 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m5 5 10 10M15 5 5 15" /></svg>
 );
 const IconCopy = ({ className, size = 14 }: IconProps) => (
@@ -78,32 +78,64 @@ const IconInbox = ({ className, size = 20 }: IconProps) => (
   </svg>
 );
 
-/* Logo Ufficiale Sigma-Flow */
-function Mark({ size = 28 }: { size?: number }) {
+/* ==========================================================================
+   LOGO UFFICIALE SIGMA-FLOW
+   ========================================================================== */
+
+function Mark({ size = 38 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" className="flex-none">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="flex-none drop-shadow-[0_0_14px_rgba(77,124,254,0.45)]"
+      aria-hidden="true"
+    >
       <defs>
-        <linearGradient id="siteSigmaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="sigmaGradHeader" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4D7CFE" />
           <stop offset="45%" stopColor="#38BDF8" />
           <stop offset="100%" stopColor="#2CE0A5" />
         </linearGradient>
       </defs>
+
+      {/* Squircle di sfondo */}
+      <rect width="512" height="512" rx="120" fill="#080C14" />
+      <rect
+        width="496"
+        height="496"
+        x="8"
+        y="8"
+        rx="112"
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.12)"
+        strokeWidth="10"
+      />
+
+      {/* Corpo della Sigma in gradiente */}
       <path
-        d="M23.5 9H9.5L16.2 16L9.5 23H20.5"
-        stroke="url(#siteSigmaGrad)"
-        strokeWidth="3.2"
+        d="M 380 144 H 156 L 262 256 L 156 368 H 336"
+        fill="none"
+        stroke="url(#sigmaGradHeader)"
+        strokeWidth="52"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+
+      {/* Freccia cinetica verde menta */}
       <path
-        d="M17.5 19.5L22.5 23L17.5 26.5"
+        d="M 285 316 L 378 368 L 285 420"
+        fill="none"
         stroke="#2CE0A5"
-        strokeWidth="3.2"
+        strokeWidth="52"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="16.2" cy="16" r="1.5" fill="#FFFFFF" />
+
+      {/* Nodo di calcolo centrale luminescente */}
+      <circle cx="262" cy="256" r="26" fill="#FFFFFF" />
     </svg>
   );
 }
@@ -404,23 +436,23 @@ function FaqItem({
         aria-expanded={open}
         className="w-full flex items-center gap-4 py-5 text-left group cursor-pointer"
       >
-        <span className={`font-mono text-[11px] flex-none transition-colors ${open ? 'text-accent-hi font-bold' : 'text-faint'}`}>
+        <span className={`font-mono text-[13px] font-bold flex-none transition-colors ${open ? 'text-accent-hi' : 'text-slate-400'}`}>
           {String(index + 1).padStart(2, '0')}
         </span>
-        <span className={`text-[15px] font-medium flex-1 transition-colors ${open ? 'text-ink' : 'text-slate-200 group-hover:text-white'}`}>
+        <span className={`text-[16px] font-medium flex-1 transition-colors ${open ? 'text-white' : 'text-slate-200 group-hover:text-white'}`}>
           {question}
         </span>
-        <span className={`w-7 h-7 rounded-md border flex items-center justify-center flex-none transition-all duration-300 ${
+        <span className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-none transition-all duration-300 ${
           open
-            ? 'border-accent/40 bg-accent/10 text-accent-hi rotate-180'
-            : 'border-line text-faint group-hover:text-muted group-hover:border-line-strong'
+            ? 'border-accent/50 bg-accent/15 text-accent-hi rotate-180'
+            : 'border-line text-slate-400 group-hover:text-white group-hover:border-line-strong'
         }`}>
           <IconChevronDown />
         </span>
       </button>
       <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
         <div className="overflow-hidden">
-          <p className="pb-5 pl-9 pr-10 text-[13px] leading-relaxed text-muted">
+          <p className="pb-5 pl-10 pr-10 text-[14px] leading-relaxed text-slate-300">
             {answer}
           </p>
         </div>
@@ -565,7 +597,7 @@ const SWATCHES = [
 ];
 
 /* ==========================================================================
-   HEADER CENTRATO & AD ALTA VISIBILITÀ
+   HEADER — Centrato, ad alto contrasto e con nuovo logo Sigma-Flow
    ========================================================================== */
 
 function Header() {
@@ -573,30 +605,30 @@ function Header() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50">
-      <div className="relative bg-void/85 backdrop-blur-xl border-b border-line">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[68px] flex items-center justify-between relative">
+      <div className="relative bg-[#06080D]/90 backdrop-blur-2xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-[74px] flex items-center justify-between relative">
           
           {/* Logo SX con Sigma-Flow */}
-          <Link href="/" className="flex items-center gap-3 z-10" onClick={() => setOpen(false)}>
-            <Mark size={28} />
-            <span className="font-mono text-[16px] sm:text-[18px] font-bold tracking-[0.1em] text-white">
+          <Link href="/" className="flex items-center gap-3.5 z-20 group" onClick={() => setOpen(false)}>
+            <Mark size={38} />
+            <span className="font-mono text-[19px] sm:text-[21px] font-extrabold tracking-[0.08em] text-white">
               CALCFLOW
             </span>
-            <span className="hidden xl:inline chip !py-0.5 !px-2 !text-[9px] border-line-strong text-slate-400">
+            <span className="hidden xl:inline-block font-mono text-[10px] font-semibold text-slate-300 bg-white/10 border border-white/15 px-2 py-0.5 rounded">
               v2.6
             </span>
           </Link>
 
-          {/* Voci di navigazione matematicamente centrate e ingrandite */}
+          {/* Menu Desktop: Matematicamente Centrato, Grande e Luminoso */}
           <nav
-            className="hidden md:flex items-center gap-8 lg:gap-10 absolute left-1/2 -translate-x-1/2 z-10"
+            className="hidden md:flex items-center gap-9 lg:gap-11 absolute left-1/2 -translate-x-1/2 z-20"
             aria-label="Navigazione principale"
           >
             {NAV_LINKS.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
-                className="font-mono text-[13px] lg:text-[14px] font-semibold tracking-[0.14em] uppercase text-slate-300 hover:text-white transition-colors duration-150 py-1 hover:drop-shadow-[0_0_8px_rgba(77,124,254,0.6)]"
+                className="font-mono text-[15px] font-semibold tracking-[0.14em] uppercase text-slate-200 hover:text-white transition-all duration-150 py-1.5 hover:drop-shadow-[0_0_10px_rgba(77,124,254,0.8)]"
               >
                 {l.label}
               </a>
@@ -604,23 +636,29 @@ function Header() {
           </nav>
 
           {/* Azioni DX */}
-          <div className="hidden md:flex items-center gap-3.5 z-10">
-            <span className="hidden lg:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400 mr-2">
+          <div className="hidden md:flex items-center gap-4 z-20">
+            <span className="hidden lg:flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300 mr-1">
               <span className="dot-live" />
-              SYSTEMS OPERATIONAL
+              OPERATIONAL
             </span>
-            <Link href="/login" className="btn btn-ghost btn-sm !text-slate-200 hover:!text-white !text-[12px]">
+            <Link
+              href="/login"
+              className="font-mono text-[13px] font-semibold uppercase tracking-wider text-slate-200 hover:text-white px-4 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transition-colors"
+            >
               Accedi
             </Link>
-            <Link href="/login?mode=signup" className="btn btn-primary btn-sm !text-[12px] !shadow-[0_0_20px_rgba(77,124,254,0.4)]">
+            <Link
+              href="/login?mode=signup"
+              className="btn btn-primary !text-[13px] !py-2.5 !px-5 font-bold shadow-[0_0_24px_rgba(77,124,254,0.5)]"
+            >
               Inizia gratis
-              <IconArrowUpRight />
+              <IconArrowUpRight size={13} />
             </Link>
           </div>
 
-          {/* Hamburger mobile */}
+          {/* Menu Mobile */}
           <button
-            className="md:hidden btn-icon z-10"
+            className="md:hidden btn-icon z-20"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? 'Chiudi menu' : 'Apri menu'}
@@ -632,26 +670,26 @@ function Header() {
         <ScrollProgress />
       </div>
 
-      {/* Menu mobile a comparsa */}
-      <div className={`md:hidden overflow-hidden transition-all duration-300 bg-void/95 backdrop-blur-xl border-b border-line ${
+      {/* Dropdown Mobile */}
+      <div className={`md:hidden overflow-hidden transition-all duration-300 bg-[#06080D]/95 backdrop-blur-2xl border-b border-white/15 ${
         open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
       }`}>
-        <nav className="px-6 py-5 flex flex-col gap-2" aria-label="Navigazione mobile">
+        <nav className="px-6 py-6 flex flex-col gap-2" aria-label="Navigazione mobile">
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="py-3 font-mono text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-200 hover:text-white transition-colors border-b border-line/50 last:border-0"
+              className="py-3 font-mono text-[16px] font-semibold uppercase tracking-[0.14em] text-slate-100 hover:text-white transition-colors border-b border-white/10 last:border-0"
             >
               {l.label}
             </a>
           ))}
-          <div className="flex gap-3 pt-3">
-            <Link href="/login" className="btn btn-ghost btn-sm flex-1 !text-[13px]" onClick={() => setOpen(false)}>
+          <div className="flex gap-3 pt-4">
+            <Link href="/login" className="btn btn-ghost btn-sm flex-1 !text-[14px] py-3" onClick={() => setOpen(false)}>
               Accedi
             </Link>
-            <Link href="/login?mode=signup" className="btn btn-primary btn-sm flex-1 !text-[13px]" onClick={() => setOpen(false)}>
+            <Link href="/login?mode=signup" className="btn btn-primary btn-sm flex-1 !text-[14px] py-3" onClick={() => setOpen(false)}>
               Inizia gratis
             </Link>
           </div>
@@ -667,7 +705,7 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-[68px]">
+    <section className="relative overflow-hidden pt-[74px]">
       <div className="absolute inset-0 glow-hero pointer-events-none" />
       <div className="absolute inset-0 bg-grid grid-fade pointer-events-none" />
       <div className="absolute inset-0 pointer-events-none">
@@ -709,7 +747,7 @@ function Hero() {
 
         <div className="anim-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2"
           style={{ animationDelay: '320ms' }}>
-          <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-faint mr-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-slate-400 mr-2">
             Integrazioni native
           </span>
           {['Supabase', 'Make', 'Zapier', 'n8n', 'Webhook'].map((name) => (
@@ -731,11 +769,11 @@ function Ticker() {
     <div className="ticker relative border-y border-line bg-surface/60 overflow-hidden" aria-hidden="true">
       <div className="ticker-track py-2.5">
         {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-          <span key={i} className="flex-none flex items-center gap-3 px-7 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.18em]">
-            <span className={`w-1 h-1 rounded-full flex-none ${
+          <span key={i} className="flex-none flex items-center gap-3 px-7 whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.18em]">
+            <span className={`w-1.5 h-1.5 rounded-full flex-none ${
               item.tone === 'mint' ? 'bg-mint' : item.tone === 'cyan' ? 'bg-cyan' : 'bg-accent'
             }`} />
-            <span className="text-muted">{item.text}</span>
+            <span className="text-slate-300 font-medium">{item.text}</span>
           </span>
         ))}
       </div>
@@ -788,14 +826,14 @@ function DemoSection() {
               </p>
             </div>
 
-            <ul className="space-y-3 font-mono text-[11px]">
+            <ul className="space-y-3 font-mono text-[12px]">
               {[
                 'Ricalcolo lato client — 0ms di attesa',
                 'Stato completo allegato a ogni lead',
                 'Lead gate configurabile per terminale',
                 'Auto-resize iframe via postMessage'
               ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-muted">
+                <li key={item} className="flex items-center gap-3 text-slate-300">
                   <span className="w-4 h-4 rounded border border-mint/30 bg-mint/10 text-mint flex items-center justify-center flex-none">
                     <IconCheck size={9} />
                   </span>
@@ -805,7 +843,7 @@ function DemoSection() {
             </ul>
 
             <div className="panel-flat p-4 space-y-3">
-              <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-faint">
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-slate-400">
                 Personalizza il colore — tocca uno swatch
               </span>
               <div className="flex items-center gap-2.5">
@@ -818,13 +856,13 @@ function DemoSection() {
                     aria-pressed={accent === s.value}
                     className={`w-8 h-8 rounded-lg border transition-all duration-200 cursor-pointer ${
                       accent === s.value
-                        ? 'scale-110 border-white/50 shadow-[0_0_16px_rgba(255,255,255,0.15)]'
+                        ? 'scale-110 border-white/60 shadow-[0_0_16px_rgba(255,255,255,0.2)]'
                         : 'border-line hover:scale-105 hover:border-line-strong'
                     }`}
                     style={{ backgroundColor: s.value }}
                   />
                 ))}
-                <span className="ml-2 font-mono text-[10px] text-faint tabular">
+                <span className="ml-2 font-mono text-[11px] text-slate-300 font-semibold tabular">
                   {accent.toUpperCase()}
                 </span>
               </div>
@@ -876,7 +914,7 @@ function MetricsBand() {
                   className="bg-gradient-to-r from-ink to-accent-hi bg-clip-text text-transparent"
                 />
               </div>
-              <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-faint leading-relaxed">
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 leading-relaxed">
                 {m.label}
               </p>
             </div>
@@ -910,11 +948,11 @@ function StepsSection() {
                   <div className="w-[72px] h-[72px] rounded-2xl border border-accent/25 bg-accent/[0.08] text-accent-hi flex items-center justify-center">
                     <s.icon size={26} />
                   </div>
-                  <span className="absolute -top-2 -right-2 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-void border border-line-strong text-muted tabular">
+                  <span className="absolute -top-2 -right-2 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-void border border-line-strong text-slate-300 tabular">
                     {s.n}
                   </span>
                 </div>
-                <h3 className="text-[16px] font-semibold text-ink">{s.title}</h3>
+                <h3 className="text-[17px] font-semibold text-ink">{s.title}</h3>
                 <p className="text-[13px] leading-relaxed text-muted">{s.body}</p>
               </div>
             ))}
@@ -939,7 +977,7 @@ function FeaturesSection() {
                 Ingegnerizzato come uno strumento di precisione
               </h2>
             </div>
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-400">
               6 moduli · 0 dipendenze superflue
             </span>
           </div>
@@ -951,13 +989,13 @@ function FeaturesSection() {
                   <div className="w-11 h-11 rounded-xl border border-accent/25 bg-accent/[0.08] text-accent-hi flex items-center justify-center">
                     <f.icon size={20} />
                   </div>
-                  <span className="font-mono text-[8px] uppercase tracking-[0.24em] text-faint border border-line rounded px-1.5 py-0.5">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-slate-400 border border-line rounded px-1.5 py-0.5">
                     {f.tag}
                   </span>
                 </div>
-                <h3 className="text-[15px] font-semibold text-ink mb-2">{f.title}</h3>
+                <h3 className="text-[16px] font-semibold text-ink mb-2">{f.title}</h3>
                 <p className="text-[13px] leading-relaxed text-muted">{f.body}</p>
-                <span className="absolute top-4 right-4 font-mono text-[9px] text-faint/60 tabular">
+                <span className="absolute top-4 right-4 font-mono text-[10px] text-faint/60 tabular">
                   {f.n}
                 </span>
               </TiltCard>
@@ -998,14 +1036,14 @@ function EmbedSection() {
             <span className="section-label">04 — Deploy</span>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink leading-[1.1]">
               Un rigo di codice.
-              <span className="block text-faint font-normal text-2xl sm:text-3xl mt-2">Zero manutenzione.</span>
+              <span className="block text-slate-400 font-normal text-2xl sm:text-3xl mt-2">Zero manutenzione.</span>
             </h2>
             <p className="text-sm leading-relaxed text-muted max-w-md">
               Copia lo snippet, incollalo dove vuoi che appaia il preventivo.
               Lo script di auto-ridimensionamento tiene l’iframe perfetto su
               ogni viewport, senza righe extra di CSS o JavaScript.
             </p>
-            <ul className="space-y-2.5 font-mono text-[11px] text-muted">
+            <ul className="space-y-2.5 font-mono text-[12px] text-slate-300">
               {['Nessun conflitto di stile con il tuo dominio', 'Altezza sincronizzata in tempo reale', 'Lazy-loading nativo dell’iframe'].map((t) => (
                 <li key={t} className="flex items-center gap-3">
                   <span className="w-4 h-4 rounded border border-accent/30 bg-accent/10 text-accent-hi flex items-center justify-center flex-none">
@@ -1023,7 +1061,7 @@ function EmbedSection() {
                 <span className="w-2.5 h-2.5 rounded-full bg-rose/60" />
                 <span className="w-2.5 h-2.5 rounded-full bg-amber/60" />
                 <span className="w-2.5 h-2.5 rounded-full bg-mint/60" />
-                <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.18em] text-faint">
+                <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">
                   embed.html
                 </span>
               </div>
@@ -1064,20 +1102,20 @@ function ComparisonSection() {
           </div>
 
           <div className="panel overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_1fr_1fr] font-mono text-[9px] uppercase tracking-[0.2em] text-faint border-b border-line bg-white/[0.02]">
+            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_1fr_1fr] font-mono text-[10px] uppercase tracking-[0.2em] text-slate-400 border-b border-line bg-white/[0.02]">
               <span className="px-5 py-3.5">Metrica</span>
-              <span className="px-5 py-3.5 text-accent-hi text-center">CalcFlow</span>
+              <span className="px-5 py-3.5 text-accent-hi text-center font-bold">CalcFlow</span>
               <span className="px-5 py-3.5 text-right sm:text-center hidden sm:block">Form statico</span>
             </div>
             {COMPARISON.map((row, i) => (
               <div
                 key={row.label}
-                className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_1fr_1fr] items-center gap-3 px-5 py-4 text-[13px] hover:bg-white/[0.02] transition-colors ${
+                className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_1fr_1fr] items-center gap-3 px-5 py-4 text-[14px] hover:bg-white/[0.02] transition-colors ${
                   i < COMPARISON.length - 1 ? 'border-b border-line' : ''
                 }`}
               >
                 <span className="text-muted">{row.label}</span>
-                <span className="flex items-center gap-2 text-ink font-medium text-right sm:text-left justify-end sm:justify-start">
+                <span className="flex items-center gap-2 text-ink font-semibold text-right sm:text-left justify-end sm:justify-start">
                   <span className="w-4 h-4 rounded-full bg-mint/15 border border-mint/40 text-mint flex items-center justify-center flex-none">
                     <IconCheck size={9} />
                   </span>
@@ -1177,8 +1215,8 @@ function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="lg:col-span-2 space-y-4 max-w-sm">
             <div className="flex items-center gap-3">
-              <Mark size={26} />
-              <span className="font-mono text-[16px] font-bold tracking-[0.08em] text-white">
+              <Mark size={32} />
+              <span className="font-mono text-[19px] font-bold tracking-[0.08em] text-white">
                 CALCFLOW
               </span>
             </div>
@@ -1187,18 +1225,18 @@ function Footer() {
               che prendono sul serio i propri numeri. Formule deterministiche,
               webhook nativi, deploy in un rigo.
             </p>
-            <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-faint">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">
               <span className="dot-live" />
               All systems operational
             </div>
           </div>
 
           <div>
-            <h4 className="font-mono text-[9px] uppercase tracking-[0.24em] text-faint mb-4">Indice</h4>
+            <h4 className="font-mono text-[11px] uppercase tracking-[0.24em] text-slate-300 font-bold mb-4">Indice</h4>
             <ul className="space-y-2.5">
               {NAV_LINKS.map((l) => (
                 <li key={l.href}>
-                  <a href={l.href} className="text-[13px] text-muted hover:text-white transition-colors">
+                  <a href={l.href} className="text-[14px] text-muted hover:text-white transition-colors">
                     {l.label}
                   </a>
                 </li>
@@ -1207,20 +1245,20 @@ function Footer() {
           </div>
 
           <div>
-            <h4 className="font-mono text-[9px] uppercase tracking-[0.24em] text-faint mb-4">Accesso</h4>
+            <h4 className="font-mono text-[11px] uppercase tracking-[0.24em] text-slate-300 font-bold mb-4">Accesso</h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/login" className="text-[13px] text-muted hover:text-white transition-colors">
+                <Link href="/login" className="text-[14px] text-muted hover:text-white transition-colors">
                   Accedi al terminale
                 </Link>
               </li>
               <li>
-                <Link href="/login?mode=signup" className="text-[13px] text-muted hover:text-white transition-colors">
+                <Link href="/login?mode=signup" className="text-[14px] text-muted hover:text-white transition-colors">
                   Crea un account
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="text-[13px] text-muted hover:text-white transition-colors">
+                <Link href="/dashboard" className="text-[14px] text-muted hover:text-white transition-colors">
                   Dashboard lead
                 </Link>
               </li>
@@ -1228,11 +1266,11 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-5 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-[9px] uppercase tracking-[0.18em] text-faint">
+        <div className="mt-12 pt-5 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">
           <span>© 2026 CalcFlow Protocol — Tutti i diritti riservati</span>
           <span className="flex items-center gap-2">
             Engine v2.6
-            <span className="w-1 h-1 rounded-full bg-faint" />
+            <span className="w-1 h-1 rounded-full bg-slate-500" />
             Postgres · RLS Active
           </span>
         </div>
@@ -1242,7 +1280,7 @@ function Footer() {
 }
 
 /* ==========================================================================
-   ENTRYPOINT PAGINA
+   ENTRYPOINT
    ========================================================================== */
 
 export default function LandingPage() {
