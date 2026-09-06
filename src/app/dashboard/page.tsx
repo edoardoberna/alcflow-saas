@@ -36,7 +36,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCalc, setSelectedCalc] = useState<string>('all');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     async function checkAuthAndLoad() {
@@ -47,7 +46,6 @@ export default function DashboardPage() {
       }
       setCurrentUser(user);
 
-      // Carica il piano dell'utente
       const { data: profile } = await supabase
         .from('profiles')
         .select('plan')
@@ -93,9 +91,7 @@ export default function DashboardPage() {
       .eq('id', calc.id)
       .eq('user_id', currentUser.id);
 
-    if (error) {
-      alert("Errore durante l'aggiornamento dello stato.");
-    } else {
+    if (!error) {
       setCalculators((prev) =>
         prev.map((c) => (c.id === calc.id ? { ...c, is_published: newStatus } : c))
       );
@@ -104,33 +100,20 @@ export default function DashboardPage() {
   };
 
   const handleDeleteCalculator = async (calc: CalculatorItem) => {
-    const confirmDelete = window.confirm(
-      `Sei sicuro di voler eliminare "${calc.title}"?\n\nATTENZIONE: Questa azione cancellerà anche tutti i lead associati.`
-    );
-    if (!confirmDelete) return;
+    if (!confirm(`Confermi l'eliminazione del terminale "${calc.title}"?`)) return;
 
     setActionLoadingId(calc.id);
-
     const { error } = await supabase
       .from('calculators')
       .delete()
       .eq('id', calc.id)
       .eq('user_id', currentUser.id);
 
-    if (error) {
-      alert("Errore durante l'eliminazione.");
-    } else {
+    if (!error) {
       setCalculators((prev) => prev.filter((c) => c.id !== calc.id));
       setLeads((prev) => prev.filter((l) => l.calculator_id !== calc.id));
     }
     setActionLoadingId(null);
-  };
-
-  const handleNewCalculatorClick = (e: React.MouseEvent) => {
-    if (userPlan === 'free' && calculators.length >= 1) {
-      e.preventDefault();
-      setShowUpgradeModal(true);
-    }
   };
 
   const handleLogout = async () => {
@@ -145,208 +128,165 @@ export default function DashboardPage() {
   const calcMap = new Map(calculators.map((c) => [c.id, c.title]));
 
   const exportToCSV = () => {
-    if (filteredLeads.length === 0) {
-      alert('Nessun lead da esportare.');
-      return;
-    }
-
-    const headers = ['Data', 'Calcolatore', 'Nome', 'Email', 'Dati Input', 'Risultati Calcolati'];
-    
+    if (filteredLeads.length === 0) return;
+    const headers = ['Timestamp', 'Calculator', 'Contact', 'Email', 'Inputs', 'Calculated_Outputs'];
     const rows = filteredLeads.map((l) => {
-      const date = new Date(l.created_at).toLocaleString('it-IT');
+      const date = new Date(l.created_at).toISOString();
       const calcTitle = calcMap.get(l.calculator_id) || l.calculator_id;
       const name = l.contact_data?.fullName || '';
       const email = l.contact_data?.email || '';
       const inputs = JSON.stringify(l.calculation_state?.inputs || {}).replace(/"/g, '""');
       const results = JSON.stringify(l.calculation_state?.results || {}).replace(/"/g, '""');
-
       return `"${date}","${calcTitle}","${name}","${email}","${inputs}","${results}"`;
     });
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `leads_calcflow_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
+    link.href = encodedUri;
+    link.download = `calcflow_leads_${Date.now()}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#06080D] gap-3 font-mono">
+        <div className="w-8 h-8 border-2 border-[#00F0FF] border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-xs text-slate-400">CONNECTING TO DATA TERMINAL...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-6 md:p-10 font-sans">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#06080D] text-slate-100 bg-tech-grid p-6 md:p-10 font-sans selection:bg-[#00F0FF] selection:text-[#06080D]">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Header Superiore con UserAvatar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard Contatti & Lead</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Monitora conversioni, calcoli e contatti in tempo reale</p>
+        {/* Terminal Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-mono text-xs text-[#00F0FF]">
+              <span className="w-2 h-2 rounded-full bg-[#00F59B] animate-pulse"></span>
+              <span>TERMINAL // ANALYTICS &amp; TELEMETRY</span>
+            </div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white">
+              Data Operations Center
+            </h1>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              onClick={handleNewCalculatorClick}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow-sm"
+              className="px-4 py-2 bg-[#101623] hover:bg-[#161E2E] border border-white/10 text-xs font-mono text-slate-200 rounded-lg transition"
             >
-              + Nuovo Calcolatore
+              ← LANDING PAGE
             </Link>
             <button
               onClick={exportToCSV}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm cursor-pointer"
+              className="px-4 py-2 bg-[#00F0FF] hover:bg-[#00D8E6] text-[#06080D] text-xs font-mono font-bold rounded-lg transition uppercase tracking-wider cursor-pointer"
             >
-              Esporta in CSV
+              EXPORT CSV ↗
             </button>
-            <div className="pl-2 border-l border-slate-200">
+            <div className="pl-2 border-l border-white/10">
               <UserAvatar
                 email={currentUser?.email}
                 plan={userPlan}
                 onLogout={handleLogout}
-                onUpgradeClick={() => setShowUpgradeModal(true)}
               />
             </div>
           </div>
         </div>
 
-        {/* Banner Upgrade se Free */}
-        {userPlan === 'free' && (
-          <div className="p-4 rounded-2xl bg-linear-to-r from-blue-900 to-indigo-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-300">Limite Piano Free Attivo</span>
-              <p className="text-sm font-medium mt-0.5">
-                Stai utilizzando <strong>{calculators.length} di 1</strong> calcolatore consentito. Passa a Pro per calcolatori illimitati.
-              </p>
+        {/* Bento Metrics Arkham Style */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
+          <div className="p-5 rounded-2xl terminal-panel border border-white/10">
+            <div className="flex justify-between items-center text-[11px] text-slate-500 uppercase">
+              <span>ACTIVE CALCULATORS</span>
+              <span className="text-[#00F0FF]">{userPlan.toUpperCase()}</span>
             </div>
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="px-4 py-2 bg-white text-blue-900 font-bold text-xs rounded-xl hover:bg-blue-50 transition cursor-pointer whitespace-nowrap shadow-xs"
-            >
-              Passa a Pro (29€/m) →
-            </button>
+            <p className="text-3xl font-black text-white font-tabular mt-2">{calculators.length}</p>
           </div>
-        )}
 
-        {/* Metriche */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold uppercase text-slate-400">Calcolatori</span>
-              <span className="text-[10px] font-mono text-slate-400">
-                {userPlan === 'free' ? `${calculators.length}/1 (Max Free)` : 'Illimitati (Pro)'}
-              </span>
-            </div>
-            <p className="text-3xl font-black text-slate-900 mt-1">{calculators.length}</p>
+          <div className="p-5 rounded-2xl terminal-panel border border-white/10">
+            <span className="text-[11px] text-slate-500 uppercase block">TOTAL LEADS ACQUIRED</span>
+            <p className="text-3xl font-black text-[#00F59B] font-tabular mt-2">{leads.length}</p>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-semibold uppercase text-slate-400">Lead Totali Raccolti</span>
-            <p className="text-3xl font-black text-blue-600 mt-1">{leads.length}</p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-semibold uppercase text-slate-400">Media Lead/Calcolatore</span>
-            <p className="text-3xl font-black text-emerald-600 mt-1">
-              {calculators.length > 0 ? (leads.length / calculators.length).toFixed(1) : '0'}
+
+          <div className="p-5 rounded-2xl terminal-panel border border-white/10">
+            <span className="text-[11px] text-slate-500 uppercase block">AVERAGE CAPTURE RATIO</span>
+            <p className="text-3xl font-black text-[#00F0FF] font-tabular mt-2">
+              {calculators.length > 0 ? (leads.length / calculators.length).toFixed(1) : '0.0'}
             </p>
           </div>
         </div>
 
-        {/* Tabella Gestione Calcolatori */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">I Tuoi Calcolatori</h2>
-              <p className="text-xs text-slate-500">Gestisci lo stato di pubblicazione e le integrazioni</p>
-            </div>
-            <span className="text-xs font-semibold text-slate-400">Totale: {calculators.length}</span>
+        {/* Tabella Calcolatori */}
+        <div className="terminal-panel rounded-2xl p-6 border border-white/10 space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-mono font-bold uppercase text-slate-300">
+              CONFIGURED ENGINE TERMINALS
+            </span>
+            <span className="text-xs font-mono text-slate-500">COUNT: {calculators.length}</span>
           </div>
 
-          {calculators.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
-              Non hai ancora creato nessun calcolatore. Inizia cliccando su "+ Nuovo Calcolatore".
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {calculators.map((calc) => (
-                <div key={calc.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">{calc.title}</h3>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          calc.is_published
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        {calc.is_published ? '● Attivo' : '○ In Pausa'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-mono text-slate-400">ID: {calc.id}</p>
-                  </div>
-
+          <div className="divide-y divide-white/5">
+            {calculators.map((calc) => (
+              <div key={calc.id} className="py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono">
+                <div>
                   <div className="flex items-center gap-2">
-                    <button
-                      disabled={actionLoadingId === calc.id}
-                      onClick={() => handleTogglePublish(calc)}
-                      className={`text-xs px-3 py-1.5 font-semibold rounded-lg border transition cursor-pointer disabled:opacity-50 ${
-                        calc.is_published
-                          ? 'border-slate-300 text-slate-600 hover:bg-slate-100'
-                          : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                      }`}
-                    >
-                      {calc.is_published ? 'Metti in Pausa' : 'Attiva Widget'}
-                    </button>
-
-                    <Link
-                      href={`/?id=${calc.id}`}
-                      className="text-xs px-3 py-1.5 font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                    >
-                      Modifica
-                    </Link>
-
-                    <Link
-                      href={`/embed/${calc.id}`}
-                      target="_blank"
-                      className="text-xs px-3 py-1.5 font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
-                    >
-                      Embed ↗
-                    </Link>
-
-                    <button
-                      disabled={actionLoadingId === calc.id}
-                      onClick={() => handleDeleteCalculator(calc)}
-                      className="text-xs px-3 py-1.5 font-semibold rounded-lg text-red-600 hover:bg-red-50 transition cursor-pointer disabled:opacity-50"
-                    >
-                      Elimina
-                    </button>
+                    <span className="text-sm font-bold text-white">{calc.title}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${
+                      calc.is_published ? 'bg-[#00F59B]/10 text-[#00F59B] border border-[#00F59B]/20' : 'bg-amber-950/40 text-[#FFB800] border border-[#FFB800]/20'
+                    }`}>
+                      {calc.is_published ? '● ONLINE' : '○ PAUSED'}
+                    </span>
                   </div>
+                  <span className="text-[10px] text-slate-500">ID: {calc.id}</span>
                 </div>
-              ))}
-            </div>
-          )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleTogglePublish(calc)}
+                    disabled={actionLoadingId === calc.id}
+                    className="text-xs px-3 py-1.5 rounded border border-white/10 hover:bg-[#101623] text-slate-300 transition cursor-pointer"
+                  >
+                    {calc.is_published ? 'PAUSE' : 'ACTIVATE'}
+                  </button>
+                  <Link
+                    href={`/embed/${calc.id}`}
+                    target="_blank"
+                    className="text-xs px-3 py-1.5 rounded bg-[#101623] border border-white/10 text-[#00F0FF] hover:bg-[#161E2E] transition"
+                  >
+                    PREVIEW ↗
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteCalculator(calc)}
+                    disabled={actionLoadingId === calc.id}
+                    className="text-xs px-3 py-1.5 rounded text-red-400 hover:bg-red-950/30 transition cursor-pointer"
+                  >
+                    DELETE
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Tabella Lead Ricevuti */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-slate-900">Elenco Lead Ricevuti</h2>
-            
+        {/* High-Density Live Feed dei Lead (Arkham Transaction Feed) */}
+        <div className="terminal-panel rounded-2xl border border-white/10 overflow-hidden font-mono">
+          <div className="p-4 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-slate-500">Filtra:</label>
+              <span className="w-2 h-2 rounded-full bg-[#00F0FF] animate-ping"></span>
+              <span className="text-xs font-bold uppercase text-slate-200">INCOMING LEAD FEED</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <label className="text-slate-500">FILTER:</label>
               <select
                 value={selectedCalc}
                 onChange={(e) => setSelectedCalc(e.target.value)}
-                className="text-xs p-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="bg-[#101623] text-slate-300 border border-white/10 rounded px-2.5 py-1 text-xs focus:outline-none"
               >
-                <option value="all">Tutti i Calcolatori ({leads.length})</option>
+                <option value="all">ALL TERMINALS ({leads.length})</option>
                 {calculators.map((c) => (
                   <option key={c.id} value={c.id}>{c.title}</option>
                 ))}
@@ -355,49 +295,43 @@ export default function DashboardPage() {
           </div>
 
           {filteredLeads.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-xs">
-              Nessun lead ancora registrato per i tuoi calcolatori.
+            <div className="p-12 text-center text-slate-500 text-xs">
+              NO INCOMING ENTRIES DETECTED IN STREAM.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
-                    <th className="p-4">Data</th>
-                    <th className="p-4">Calcolatore</th>
-                    <th className="p-4">Nome</th>
-                    <th className="p-4">Email</th>
-                    <th className="p-4">Valori Calcolati</th>
+                  <tr className="bg-[#101623]/60 text-slate-400 border-b border-white/5 text-[11px]">
+                    <th className="p-3">TIMESTAMP</th>
+                    <th className="p-3">TARGET ENGINE</th>
+                    <th className="p-3">ENTITY</th>
+                    <th className="p-3">COMMUNICATION</th>
+                    <th className="p-3">COMPUTED TELEMETRY</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-white/5 text-slate-300">
                   {filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-slate-50/80 transition">
-                      <td className="p-4 font-mono text-slate-500 whitespace-nowrap">
-                        {new Date(lead.created_at).toLocaleDateString('it-IT', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                    <tr key={lead.id} className="hover:bg-white/[0.02] transition">
+                      <td className="p-3 text-slate-500 whitespace-nowrap">
+                        {new Date(lead.created_at).toLocaleTimeString('it-IT')}
                       </td>
-                      <td className="p-4 font-semibold text-slate-900">
-                        {calcMap.get(lead.calculator_id) || 'Calcolatore'}
+                      <td className="p-3 font-bold text-white">
+                        {calcMap.get(lead.calculator_id) || lead.calculator_id.slice(0, 8)}
                       </td>
-                      <td className="p-4 font-medium text-slate-900">
-                        {lead.contact_data?.fullName || '—'}
+                      <td className="p-3 text-slate-300">
+                        {lead.contact_data?.fullName || 'ANONYMOUS'}
                       </td>
-                      <td className="p-4 text-blue-600 font-mono">
-                        {lead.contact_data?.email || '—'}
+                      <td className="p-3 text-[#00F0FF]">
+                        {lead.contact_data?.email || 'N/A'}
                       </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
                           {lead.calculation_state?.results &&
                             Object.entries(lead.calculation_state.results).map(([key, val]) => (
                               <span
                                 key={key}
-                                className="inline-block mr-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px]"
+                                className="px-1.5 py-0.5 rounded bg-[#101623] text-[#00F59B] border border-white/10 text-[10px]"
                               >
                                 {key}: <strong>{val?.toLocaleString('it-IT')}</strong>
                               </span>
@@ -413,65 +347,6 @@ export default function DashboardPage() {
         </div>
 
       </div>
-
-      {/* Paywall Modal */}
-      {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl font-black">
-              ★
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-900">Passa a CalcFlow Pro</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Hai raggiunto il limite di 1 calcolatore consentito nel piano Gratuito. Sblocca tutto il potenziale per la tua azienda.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2.5 text-xs text-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span><strong>Calcolatori illimitati</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span><strong>Lead e preventivi illimitati</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>Webhooks istantanei (Zapier / Make / CRM)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>Rimozione del watermark CalcFlow</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-2xl font-black text-slate-900">
-                29€ <span className="text-xs font-normal text-slate-500">/ mese</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  alert('Integrazione Stripe Checkout pronta per essere collegata!');
-                }}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg transition cursor-pointer"
-              >
-                Attiva Abbonamento Pro
-              </button>
-
-              <button
-                onClick={() => setShowUpgradeModal(false)}
-                className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
-              >
-                Continua con il piano gratuito
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,82 +1,88 @@
 @import "tailwindcss";
 
-/* 1. Definizione Token Colori nel Theme Engine */
 @theme {
-  --color-obsidian-void: #06080d;
-  --color-obsidian-panel: #0b0f17;
+  --color-obsidian-void: #06080D;
+  --color-obsidian-panel: #0B0F17;
   --color-obsidian-surface: #101623;
-  --color-obsidian-elevated: #161e2e;
+  --color-obsidian-elevated: #161E2E;
   
-  --color-hairline: rgba(255, 255, 255, 0.08);
-  --color-hairline-bright: rgba(255, 255, 255, 0.16);
+  --color-hairline: rgba(255, 255, 255, 0.07);
+  --color-hairline-bright: rgba(255, 255, 255, 0.18);
 
-  --color-cyber-cyan: #00f0ff;
-  --color-signal-emerald: #00f59b;
-  --color-telemetry-amber: #ffb800;
-  --color-telemetry-rose: #ff3366;
+  --color-cyber-cyan: #00F0FF;
+  --color-signal-emerald: #00F59B;
+  --color-telemetry-amber: #FFB800;
+  --color-telemetry-rose: #FF3366;
 }
 
-/* 2. Regole di Base per lo sfondo e la tipografia */
 :root {
   color-scheme: dark;
 }
 
 body {
-  background-color: #06080d;
-  color: #f1f5f9;
+  background-color: #06080D;
+  color: #F1F5F9;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* 3. Griglia Tecnica Sottile (Sfondo Matrix / Cyber) */
+/* Griglia millimetrica tecnica in background */
 .bg-tech-grid {
-  background-size: 32px 32px;
+  background-size: 36px 36px;
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
-/* 4. Bagliori Radiali Olografici */
-.bg-radial-glow {
-  background: radial-gradient(circle at 50% -20%, rgba(0, 240, 255, 0.07) 0%, transparent 70%);
+/* Bagliori e luci volumetriche */
+.bg-radial-hero {
+  background: radial-gradient(circle at 50% 10%, rgba(0, 240, 255, 0.09) 0%, transparent 65%);
 }
 
-.bg-radial-emerald {
-  background: radial-gradient(circle at 50% 120%, rgba(0, 245, 155, 0.05) 0%, transparent 60%);
-}
-
-/* 5. Card e Superfici da Terminale */
-.terminal-card {
-  background-color: #0b0f17;
+.terminal-panel {
+  background: #0B0F17;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
-.terminal-card:hover {
-  border-color: rgba(0, 240, 255, 0.28);
-  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.8), 0 0 20px -2px rgba(0, 240, 255, 0.12);
+.terminal-panel-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 6. Allineamento Cifre Numeriche (Tabular) */
+.terminal-panel-hover:hover {
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.9), 0 0 24px -2px rgba(0, 240, 255, 0.12);
+  transform: translateY(-2px);
+}
+
 .font-tabular {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-/* 7. Scrollbar personalizzata stile terminale */
+/* Glow fluorescente sui testi e valori */
+.glow-cyan {
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
+}
+
+.glow-emerald {
+  text-shadow: 0 0 16px rgba(0, 245, 155, 0.45);
+}
+
+/* Scrollbar stile terminale Bloomberg/Arkham */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #06080d;
+  background: #06080D;
 }
 ::-webkit-scrollbar-thumb {
-  background: #161e2e;
+  background: #161E2E;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #25334a;
+  background: #25334A;
 }
