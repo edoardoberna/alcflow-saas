@@ -1,163 +1,219 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useState, useMemo } from 'react';
+import {
+  evaluateFormula,
+  CalculatorInput,
+  CalculatorOutput
+} from '@/lib/calculator-engine';
 import CalculatorPreview from '@/components/CalculatorPreview';
-import UserAvatar from '@/components/UserAvatar';
-import { CalculatorInput, CalculatorOutput } from '@/lib/calculator-engine';
-import { supabase } from '@/lib/supabase';
 
-export default function CalculatorBuilder() {
-  const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
-  const [existingCalculatorsCount, setExistingCalculatorsCount] = useState(0);
+export interface CalculatorData {
+  id?: string;
+  title: string;
+  inputs: CalculatorInput[];
+  outputs: CalculatorOutput[];
+  primaryColor: string;
+  enableLeadGate: boolean;
+  privacyPolicyUrl: string;
+  privacyText: string;
+  postSubmitAction: 'unlock' | 'redirect';
+  redirectUrl: string;
+  webhookUrl: string;
+  isPublished: boolean;
+}
 
-  const [title, setTitle] = useState('Preventivatore Servizi');
-  const [isPublished, setIsPublished] = useState(true);
-  const [inputs, setInputs] = useState<CalculatorInput[]>([
-    { id: '1', variable: 'clienti', type: 'slider', label: 'Clienti Mensili', defaultValue: 50, min: 10, max: 500, step: 5 },
-    { id: '2', variable: 'ticket_medio', type: 'number', label: 'Scontrino Medio', defaultValue: 80, min: 1, max: 2000, step: 1, prefix: '€' },
-    {
-      id: '3',
-      variable: 'moltiplicatore_piano',
-      type: 'select',
-      label: 'Livello Servizio',
-      defaultValue: 1,
-      options: [
-        { label: 'Standard', value: 1 },
-        { label: 'Business (+25%)', value: 1.25 },
-        { label: 'Enterprise (+50%)', value: 1.5 }
-      ]
-    }
-  ]);
+interface CalculatorBuilderProps {
+  initialData?: CalculatorData;
+  onSave: (data: CalculatorData) => Promise<void>;
+  saving?: boolean;
+}
 
-  const [outputs, setOutputs] = useState<CalculatorOutput[]>([
-    {
-      id: '1',
-      variable: 'fatturato',
-      label: 'Fatturato Mensile Stimato',
-      formula: 'clienti * ticket_medio * moltiplicatore_piano',
-      prefix: '€'
-    },
-    {
-      id: '2',
-      variable: 'tariffa_scontata',
-      label: 'Tariffa Finale (Sconto Volume se > 100 clienti)',
-      formula: 'clienti > 100 ? (clienti * ticket_medio * 0.9) : (clienti * ticket_medio)',
-      prefix: '€',
-      highlight: true
-    }
-  ]);
+const SWATCHES = [
+  { label: 'Accento Blu', value: '#4D7CFE' },
+  { label: 'Ciano Signal', value: '#4CC9FF' },
+  { label: 'Menta Glow', value: '#2CE0A5' },
+  { label: 'Viola Quantum', value: '#8B7CFF' },
+  { label: 'Ambra Allarme', value: '#FFB224' }
+];
 
-  const [primaryColor, setPrimaryColor] = useState('#2563eb');
-  const [enableLeadGate, setEnableLeadGate] = useState(true);
-  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState('');
-  const [privacyText, setPrivacyText] = useState('Dichiaro di aver letto e accetto la');
-  const [postSubmitAction, setPostSubmitAction] = useState<'unlock' | 'redirect'>('unlock');
-  const [redirectUrl, setRedirectUrl] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
+export default function CalculatorBuilder({
+  initialData,
+  onSave,
+  saving = false
+}: CalculatorBuilderProps) {
+  const [activeTab, setActiveTab] = useState<'inputs' | 'outputs' | 'gate' | 'style'>('inputs');
+  const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  const [calculatorId, setCalculatorId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [loadingExisting, setLoadingExisting] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [copiedType, setCopiedType] = useState<'link' | 'iframe' | null>(null);
+  // Stato completo del Calcolatore
+  const [title, setTitle] = useState(initialData?.title || 'Nuovo Terminale di Stima');
+  const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
+  const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor || '#4D7CFE');
+  const [enableLeadGate, setEnableLeadGate] = useState(initialData?.enableLeadGate ?? true);
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState(initialData?.privacyPolicyUrl || '');
+  const [privacyText, setPrivacyText] = useState(
+    initialData?.privacyText || 'Dichiaro di aver letto e accetto la'
+  );
+  const [postSubmitAction, setPostSubmitAction] = useState<'unlock' | 'redirect'>(
+    initialData?.postSubmitAction || 'unlock'
+  );
+  const [redirectUrl, setRedirectUrl] = useState(initialData?.redirectUrl || '');
+  const [webhookUrl, setWebhookUrl] = useState(initialData?.webhookUrl || '');
 
-  useEffect(() => {
-    async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
+  // Parametri di Input
+  const [inputs, setInputs] = useState<CalculatorInput[]>(
+    initialData?.inputs?.length
+      ? initialData.inputs
+      : [
+          {
+            id: 'inp_1',
+            variable: 'volume',
+            type: 'slider',
+            label: 'Volume Mensile Stimato',
+            defaultValue: 1000,
+            min: 100,
+            max: 10000,
+            step: 50,
+            prefix: '',
+            suffix: 'unità'
+          },
+          {
+            id: 'inp_2',
+            variable: 'prezzo_unitario',
+            type: 'number',
+            label: 'Costo Medio per Unità',
+            defaultValue: 45,
+            min: 1,
+            max: 1000,
+            step: 1,
+            prefix: '€',
+            suffix: ''
+          }
+        ]
+  );
+
+  // Risultati e Formule
+  const [outputs, setOutputs] = useState<CalculatorOutput[]>(
+    initialData?.outputs?.length
+      ? initialData.outputs
+      : [
+          {
+            id: 'out_1',
+            variable: 'totale_annuo',
+            label: 'Ricavo Annuale Stimato',
+            formula: 'volume * prezzo_unitario * 12',
+            prefix: '€',
+            suffix: '/ anno',
+            highlight: true
+          },
+          {
+            id: 'out_2',
+            variable: 'totale_mensile',
+            label: 'Ricavo Mensile',
+            formula: 'volume * prezzo_unitario',
+            prefix: '€',
+            suffix: '/ mese',
+            highlight: false
+          }
+        ]
+  );
+
+  // Validazione formule in tempo reale
+  const formulaValidation = useMemo(() => {
+    const mockValues: Record<string, number> = {};
+    inputs.forEach((inp) => {
+      if (inp.variable) {
+        mockValues[inp.variable] = Number(inp.defaultValue ?? inp.min ?? 1);
       }
-      setCurrentUser(user);
+    });
 
-      // Lettura piano utente
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('plan')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.plan) {
-        setUserPlan(profile.plan as 'free' | 'pro');
+    const status: Record<string, { isValid: boolean; sampleResult: number | string }> = {};
+    outputs.forEach((out) => {
+      if (!out.variable) return;
+      try {
+        const val = evaluateFormula(out.formula || '0', mockValues);
+        if (typeof val === 'number' && !isNaN(val) && isFinite(val)) {
+          status[out.id || out.variable] = {
+            isValid: true,
+            sampleResult: val.toLocaleString('it-IT', { maximumFractionDigits: 2 })
+          };
+        } else {
+          status[out.id || out.variable] = { isValid: false, sampleResult: 'Risultato non numerico' };
+        }
+      } catch (err: any) {
+        status[out.id || out.variable] = { isValid: false, sampleResult: err.message || 'Errore sintassi' };
       }
+    });
+    return status;
+  }, [inputs, outputs]);
 
-      // Conteggio calcolatori creati
-      const { count } = await supabase
-        .from('calculators')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      setExistingCalculatorsCount(count || 0);
-    }
-    checkAuth();
-  }, [router]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const idFromUrl = searchParams.get('id');
-
-    if (idFromUrl) {
-      loadCalculatorFromDatabase(idFromUrl);
-    }
-  }, []);
-
-  const loadCalculatorFromDatabase = async (id: string) => {
-    setLoadingExisting(true);
-    const { data, error } = await supabase
-      .from('calculators')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    setLoadingExisting(false);
-
-    if (error || !data) {
-      console.error('Errore caricamento:', error);
-      alert('Impossibile caricare il calcolatore richiesto.');
-      return;
-    }
-
-    setCalculatorId(data.id);
-    setTitle(data.title || 'Calcolatore');
-    setIsPublished(data.is_published ?? true);
-
-    if (data.config) {
-      setInputs(data.config.inputs || []);
-      setOutputs(data.config.outputs || []);
-      setPrimaryColor(data.config.primaryColor || '#2563eb');
-      setEnableLeadGate(data.config.enableLeadGate ?? true);
-      setPrivacyPolicyUrl(data.config.privacyPolicyUrl || '');
-      setPrivacyText(data.config.privacyText || 'Dichiaro di aver letto e accetto la');
-      setPostSubmitAction(data.config.postSubmitAction || 'unlock');
-      setRedirectUrl(data.config.redirectUrl || '');
-      setWebhookUrl(data.config.webhookUrl || '');
-    }
+  // Gestione Input
+  const handleAddInput = () => {
+    const nextIdx = inputs.length + 1;
+    const nextId = `inp_${Date.now().toString().slice(-4)}`;
+    setInputs([
+      ...inputs,
+      {
+        id: nextId,
+        variable: `parametro_${nextIdx}`,
+        type: 'slider',
+        label: `Parametro ${nextIdx}`,
+        defaultValue: 50,
+        min: 0,
+        max: 100,
+        step: 1
+      }
+    ]);
   };
 
-  const handleSaveOrUpdate = async () => {
-    if (!currentUser) {
-      alert('Effettua prima il login.');
-      router.push('/login');
-      return;
-    }
+  const handleUpdateInput = (index: number, field: keyof CalculatorInput, value: any) => {
+    setInputs((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
 
-    // Paywall Check: blocco per account Free oltre 1 calcolatore
-    if (!calculatorId && userPlan === 'free' && existingCalculatorsCount >= 1) {
-      setShowUpgradeModal(true);
-      return;
-    }
+  const handleRemoveInput = (index: number) => {
+    setInputs((prev) => prev.filter((_, i) => i !== index));
+  };
 
-    setSaving(true);
-    setStatusMessage(null);
+  // Gestione Output
+  const handleAddOutput = () => {
+    const nextIdx = outputs.length + 1;
+    const nextId = `out_${Date.now().toString().slice(-4)}`;
+    setOutputs([
+      ...outputs,
+      {
+        id: nextId,
+        variable: `risultato_${nextIdx}`,
+        label: `Risultato ${nextIdx}`,
+        formula: inputs[0]?.variable || '0',
+        prefix: '€',
+        highlight: false
+      }
+    ]);
+  };
 
-    const configPayload = {
+  const handleUpdateOutput = (index: number, field: keyof CalculatorOutput, value: any) => {
+    setOutputs((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleRemoveOutput = (index: number) => {
+    setOutputs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSave({
+      id: initialData?.id,
+      title,
       inputs,
       outputs,
       primaryColor,
@@ -166,763 +222,626 @@ export default function CalculatorBuilder() {
       privacyText,
       postSubmitAction,
       redirectUrl,
-      webhookUrl
-    };
-
-    if (calculatorId) {
-      const { error } = await supabase
-        .from('calculators')
-        .update({
-          title,
-          is_published: isPublished,
-          config: configPayload,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', calculatorId)
-        .eq('user_id', currentUser.id);
-
-      setSaving(false);
-
-      if (error) {
-        console.error('Errore update:', error);
-        alert("Errore durante l'aggiornamento.");
-      } else {
-        setStatusMessage('Modifiche salvate con successo!');
-        setTimeout(() => setStatusMessage(null), 3500);
-      }
-    } else {
-      const { data, error } = await supabase
-        .from('calculators')
-        .insert([
-          {
-            user_id: currentUser.id,
-            title,
-            is_published: isPublished,
-            config: configPayload
-          }
-        ])
-        .select('id')
-        .single();
-
-      setSaving(false);
-
-      if (data && !error) {
-        setCalculatorId(data.id);
-        setExistingCalculatorsCount((prev) => prev + 1);
-        const newUrl = `${window.location.pathname}?id=${data.id}`;
-        window.history.replaceState({ path: newUrl }, '', newUrl);
-        setShowShareModal(true);
-      } else {
-        console.error('Errore insert:', error);
-        alert('Errore durante il salvataggio su Supabase.');
-      }
-    }
+      webhookUrl,
+      isPublished
+    });
   };
 
-  const handleDelete = async () => {
-    if (!calculatorId || !currentUser) return;
-    const confirmDelete = window.confirm(
-      'Sei sicuro di voler eliminare questo calcolatore? Tutti i lead registrati verranno cancellati.'
-    );
-    if (!confirmDelete) return;
+  const embedCode = `<iframe
+  src="${typeof window !== 'undefined' ? window.location.origin : 'https://calcflow.io'}/embed/${initialData?.id || 'IL_TUO_ID'}"
+  style="width:100%;height:680px;border:0;border-radius:14px;overflow:hidden;"
+  loading="lazy"
+  title="${title}">
+</iframe>`;
 
-    setDeleting(true);
-    const { error } = await supabase
-      .from('calculators')
-      .delete()
-      .eq('id', calculatorId)
-      .eq('user_id', currentUser.id);
-
-    setDeleting(false);
-
-    if (error) {
-      alert("Errore durante l'eliminazione.");
-    } else {
-      router.push('/dashboard');
-    }
+  const copyEmbed = async () => {
+    await navigator.clipboard.writeText(embedCode);
+    setCopiedSnippet(true);
+    setTimeout(() => setCopiedSnippet(false), 2000);
   };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
-  const handleResetNew = () => {
-    if (userPlan === 'free' && existingCalculatorsCount >= 1) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
-    if (confirm('Vuoi creare un nuovo calcolatore da zero?')) {
-      setCalculatorId(null);
-      setTitle('Nuovo Calcolatore');
-      setIsPublished(true);
-      setPrivacyPolicyUrl('');
-      setPrivacyText('Dichiaro di aver letto e accetto la');
-      setPostSubmitAction('unlock');
-      setRedirectUrl('');
-      setWebhookUrl('');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  };
-
-  const addInput = () => {
-    const newId = (inputs.length + 1).toString();
-    setInputs([
-      ...inputs,
-      {
-        id: newId,
-        variable: `param_${newId}`,
-        type: 'slider',
-        label: `Nuovo Parametro ${newId}`,
-        defaultValue: 20,
-        min: 0,
-        max: 100,
-        step: 1
-      }
-    ]);
-  };
-
-  const updateInput = (index: number, key: keyof CalculatorInput, value: any) => {
-    const updated = [...inputs];
-    if (key === 'type' && value === 'select' && (!updated[index].options || updated[index].options?.length === 0)) {
-      updated[index] = {
-        ...updated[index],
-        type: value,
-        defaultValue: 10,
-        options: [
-          { label: 'Opzione Base', value: 10 },
-          { label: 'Opzione Avanzata', value: 25 }
-        ]
-      };
-    } else {
-      updated[index] = { ...updated[index], [key]: value };
-    }
-    setInputs(updated);
-  };
-
-  const removeInput = (index: number) => {
-    setInputs(inputs.filter((_, i) => i !== index));
-  };
-
-  const addSelectOption = (inputIndex: number) => {
-    const updated = [...inputs];
-    const currentOptions = updated[inputIndex].options || [];
-    const newOption = {
-      label: `Opzione ${currentOptions.length + 1}`,
-      value: (currentOptions.length + 1) * 10
-    };
-    updated[inputIndex].options = [...currentOptions, newOption];
-    setInputs(updated);
-  };
-
-  const updateSelectOption = (
-    inputIndex: number,
-    optionIndex: number,
-    key: 'label' | 'value',
-    val: any
-  ) => {
-    const updated = [...inputs];
-    const opts = [...(updated[inputIndex].options || [])];
-    opts[optionIndex] = { ...opts[optionIndex], [key]: key === 'value' ? parseFloat(val) || 0 : val };
-    updated[inputIndex].options = opts;
-    if (optionIndex === 0) {
-      updated[inputIndex].defaultValue = opts[0].value;
-    }
-    setInputs(updated);
-  };
-
-  const removeSelectOption = (inputIndex: number, optionIndex: number) => {
-    const updated = [...inputs];
-    const opts = (updated[inputIndex].options || []).filter((_, i) => i !== optionIndex);
-    updated[inputIndex].options = opts;
-    if (opts.length > 0) {
-      updated[inputIndex].defaultValue = opts[0].value;
-    }
-    setInputs(updated);
-  };
-
-  const updateOutput = (index: number, key: keyof CalculatorOutput, value: any) => {
-    const updated = [...outputs];
-    updated[index] = { ...updated[index], [key]: value };
-    setOutputs(updated);
-  };
-
-  const getEmbedUrl = () => {
-    if (typeof window === 'undefined' || !calculatorId) return '';
-    return `${window.location.origin}/embed/${calculatorId}`;
-  };
-
-  const getIframeCode = () => {
-    const url = getEmbedUrl();
-    const cleanId = (calculatorId || 'preview').replace(/-/g, '_');
-    return `<!-- Inizio Calcolatore CalcFlow -->
-<iframe id="calcflow_${cleanId}" src="${url}" width="100%" height="550" frameborder="0" style="border:none; width:100%; max-width:100%; border-radius:16px; overflow:hidden;" scrolling="no"></iframe>
-<script>
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'CALCFLOW_RESIZE' && e.data.calculatorId === '${calculatorId}') {
-      var el = document.getElementById('calcflow_${cleanId}');
-      if (el) { el.style.height = e.data.height + 'px'; }
-    }
-  });
-</script>
-<!-- Fine Calcolatore CalcFlow -->`;
-  };
-
-  const copyToClipboard = (text: string, type: 'link' | 'iframe') => {
-    navigator.clipboard.writeText(text);
-    setCopiedType(type);
-    setTimeout(() => setCopiedType(null), 2000);
-  };
-
-  if (loadingExisting) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-3">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs text-slate-500 font-medium">Caricamento calcolatore...</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 min-h-screen bg-slate-50 text-slate-900">
-      <div className="lg:col-span-5 p-6 border-r border-slate-200 bg-white overflow-y-auto max-h-screen space-y-6">
-        
-        {/* Barra Utente & Avatar Premium */}
-        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-          <UserAvatar
-            email={currentUser?.email}
-            plan={userPlan}
-            onLogout={handleLogout}
-            onUpgradeClick={() => setShowUpgradeModal(true)}
-          />
-          <div className="flex items-center gap-2">
-            {userPlan === 'free' && (
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="hidden sm:inline-flex text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200"
-              >
-                ★ Upgrade Pro
-              </button>
-            )}
-            <Link
-              href="/dashboard"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1"
-            >
-              Dashboard ↗
-            </Link>
-          </div>
-        </div>
-
-        {/* Intestazione */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-              {calculatorId ? `ID: ${calculatorId.slice(0, 8)}...` : 'Bozza non salvata'}
-            </span>
-            <button
-              onClick={handleResetNew}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
-            >
-              + Crea Nuovo
-            </button>
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-400 font-medium">Nome Calcolatore</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-lg font-bold text-slate-900 p-1 border-b border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-none transition"
-              placeholder="Es. Preventivatore Servizi B2B"
-            />
-          </div>
-        </div>
-
-        {/* Switch Pubblicato / Attivo */}
-        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
-          <div>
-            <span className="text-xs font-semibold text-slate-800 block">Stato Widget: {isPublished ? 'Attivo' : 'In Pausa'}</span>
-            <span className="text-[11px] text-slate-500">Se disattivato, l'iFrame non sarà accessibile al pubblico</span>
-          </div>
+    <div className="w-full">
+      {/* Testata di salvataggio */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-line mb-6">
+        <div className="flex items-center gap-3">
           <input
-            type="checkbox"
-            checked={isPublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-            className="w-4 h-4 rounded cursor-pointer accent-emerald-600"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="text-xl sm:text-2xl font-bold text-ink bg-transparent border-b border-transparent hover:border-line focus:border-accent focus:outline-none transition py-1"
+            placeholder="Nome del Calcolatore..."
           />
+          <span className={`badge ${isPublished ? 'badge-mint' : 'badge-amber'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? 'bg-mint' : 'bg-amber'}`} />
+            {isPublished ? 'Online' : 'In Pausa'}
+          </span>
         </div>
 
-        {statusMessage && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg flex items-center gap-2">
-            <span>✓</span>
-            <span>{statusMessage}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {initialData?.id && (
+            <button
+              type="button"
+              onClick={() => setShowEmbedModal(true)}
+              className="btn btn-ghost btn-sm"
+            >
+              Codice Embed &lt;/&gt;
+            </button>
+          )}
 
-        <div className="flex gap-2">
           <button
-            onClick={handleSaveOrUpdate}
-            disabled={saving || deleting}
-            className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="btn btn-primary btn-sm"
           >
             {saving ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Salvataggio...</span>
-              </>
-            ) : calculatorId ? (
-              'Salva Modifiche (Aggiorna Live)'
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Scrittura…
+              </span>
             ) : (
-              'Salva & Genera Codice Embed'
+              'Salva Modifiche'
             )}
           </button>
+        </div>
+      </div>
 
-          {calculatorId && (
+      {/* Switcher Mobile: Editor vs Live Preview */}
+      <div className="flex lg:hidden grid-cols-2 gap-1 p-1 mb-6 rounded-lg bg-raised border border-line">
+        <button
+          type="button"
+          onClick={() => setMobileView('editor')}
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+            mobileView === 'editor' ? 'bg-overlay text-ink font-bold' : 'text-faint'
+          }`}
+        >
+          Editor Configurazione
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView('preview')}
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+            mobileView === 'preview' ? 'bg-overlay text-ink font-bold' : 'text-faint'
+          }`}
+        >
+          Anteprima Live
+        </button>
+      </div>
+
+      {/* Layout Split Screen */}
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
+        {/* Colonna SX: Configurazione */}
+        <div className={`lg:col-span-6 space-y-6 ${mobileView === 'preview' ? 'hidden lg:block' : ''}`}>
+          {/* Navigatore Tabs interno */}
+          <div className="flex border-b border-line gap-2 overflow-x-auto pb-px font-mono text-xs uppercase tracking-wider">
             <button
-              onClick={() => setShowShareModal(true)}
-              className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer"
+              type="button"
+              onClick={() => setActiveTab('inputs')}
+              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'inputs'
+                  ? 'border-accent text-accent-hi font-bold'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
             >
-              Codice Embed
+              1. Input ({inputs.length})
             </button>
-          )}
-        </div>
-
-        {calculatorId && (
-          <div className="pt-2">
             <button
-              onClick={handleDelete}
-              disabled={deleting || saving}
-              className="w-full py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={() => setActiveTab('outputs')}
+              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'outputs'
+                  ? 'border-accent text-accent-hi font-bold'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
             >
-              {deleting ? 'Eliminazione in corso...' : 'Elimina questo calcolatore'}
+              2. Risultati ({outputs.length})
             </button>
-          </div>
-        )}
-
-        {/* Aspetto */}
-        <div className="space-y-3 pt-2 border-t border-slate-100">
-          <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Aspetto & Colori</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={primaryColor}
-              onChange={(e) => setPrimaryColor(e.target.value)}
-              className="w-10 h-10 rounded cursor-pointer border border-slate-200"
-            />
-            <span className="text-sm font-mono text-slate-600">{primaryColor}</span>
-          </div>
-        </div>
-
-        {/* Lead Gate, GDPR, Redirect & Webhook */}
-        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-slate-800 block">Richiedi Contatto (Lead Gate)</span>
-              <span className="text-[11px] text-slate-500">Blocca i risultati finché l'utente non compila il modulo</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={enableLeadGate}
-              onChange={(e) => setEnableLeadGate(e.target.checked)}
-              className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-            />
-          </div>
-
-          {enableLeadGate && (
-            <div className="pt-3 border-t border-slate-200 space-y-4">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                  Azione dopo l'Invio del Form
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPostSubmitAction('unlock')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold border transition text-center cursor-pointer ${
-                      postSubmitAction === 'unlock'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                    }`}
-                  >
-                    Sblocca Risultati
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPostSubmitAction('redirect')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold border transition text-center cursor-pointer ${
-                      postSubmitAction === 'redirect'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                    }`}
-                  >
-                    Reindirizza a Link
-                  </button>
-                </div>
-
-                {postSubmitAction === 'redirect' && (
-                  <div className="pt-1">
-                    <label className="text-xs text-slate-500">URL di Reindirizzamento (es. Calendly / Thank You Page)</label>
-                    <input
-                      type="url"
-                      placeholder="https://calendly.com/tua-azienda/demo"
-                      value={redirectUrl}
-                      onChange={(e) => setRedirectUrl(e.target.value)}
-                      className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                  Integrazione Webhook (Zapier / Make / n8n)
-                </span>
-                <label className="text-xs text-slate-500">URL Endpoint Webhook</label>
-                <input
-                  type="url"
-                  placeholder="https://hook.eu1.make.com/tuo-token-webhook"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900 font-mono"
-                />
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 space-y-2.5">
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                  Conformità Privacy (GDPR)
-                </span>
-                <div>
-                  <label className="text-xs text-slate-500">URL Privacy Policy Aziendale</label>
-                  <input
-                    type="url"
-                    placeholder="https://azienda.it/privacy"
-                    value={privacyPolicyUrl}
-                    onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500">Testo Consenso</label>
-                  <input
-                    type="text"
-                    placeholder="Dichiaro di aver letto e accetto la"
-                    value={privacyText}
-                    onChange={(e) => setPrivacyText(e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Campi Input */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Campi di Input</label>
             <button
-              onClick={addInput}
-              className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md transition cursor-pointer"
+              type="button"
+              onClick={() => setActiveTab('gate')}
+              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'gate'
+                  ? 'border-accent text-accent-hi font-bold'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
             >
-              + Aggiungi Campo
+              3. Lead Gate
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('style')}
+              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'style'
+                  ? 'border-accent text-accent-hi font-bold'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              4. Stile & Stato
             </button>
           </div>
 
-          {inputs.map((inp, idx) => (
-            <div key={inp.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-mono font-bold text-blue-600">Variabile: {inp.variable}</span>
-                {inputs.length > 1 && (
-                  <button onClick={() => removeInput(idx)} className="text-xs text-red-500 hover:text-red-700 cursor-pointer">
-                    Rimuovi
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-slate-500">Tipo di Controllo</label>
-                  <select
-                    value={inp.type || 'slider'}
-                    onChange={(e) => updateInput(idx, 'type', e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium focus:ring-2 focus:ring-blue-600"
-                  >
-                    <option value="slider">Slider Numerico</option>
-                    <option value="number">Input Diretto (Numero)</option>
-                    <option value="select">Menu a Tendina (Select)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500">Etichetta</label>
-                  <input
-                    type="text"
-                    value={inp.label}
-                    onChange={(e) => updateInput(idx, 'label', e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-slate-500">Prefisso/Simbolo</label>
-                  <input
-                    type="text"
-                    placeholder="es. €"
-                    value={inp.prefix || ''}
-                    onChange={(e) => updateInput(idx, 'prefix', e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500">Suffisso</label>
-                  <input
-                    type="text"
-                    placeholder="es. mq"
-                    value={inp.suffix || ''}
-                    onChange={(e) => updateInput(idx, 'suffix', e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {(inp.type === 'slider' || inp.type === 'number') && (
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-xs text-slate-500">Min</label>
-                    <input
-                      type="number"
-                      value={inp.min}
-                      onChange={(e) => updateInput(idx, 'min', parseFloat(e.target.value))}
-                      className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500">Max</label>
-                    <input
-                      type="number"
-                      value={inp.max}
-                      onChange={(e) => updateInput(idx, 'max', parseFloat(e.target.value))}
-                      className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500">Step</label>
-                    <input
-                      type="number"
-                      value={inp.step}
-                      onChange={(e) => updateInput(idx, 'step', parseFloat(e.target.value))}
-                      className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {inp.type === 'select' && (
-                <div className="space-y-2 pt-2 border-t border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[11px] font-bold text-slate-600 uppercase">Opzioni Tendina</label>
+          {/* TAB 1: INPUTS */}
+          {activeTab === 'inputs' && (
+            <div className="space-y-4">
+              {inputs.map((inp, idx) => (
+                <div key={inp.id || idx} className="panel p-4 space-y-3 relative">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-[10px] text-faint">PARAMETRO #{idx + 1}</span>
                     <button
                       type="button"
-                      onClick={() => addSelectOption(idx)}
-                      className="text-[11px] text-blue-600 font-semibold hover:text-blue-800"
+                      onClick={() => handleRemoveInput(idx)}
+                      disabled={inputs.length <= 1}
+                      className="text-xs text-rose hover:underline disabled:opacity-30 disabled:no-underline cursor-pointer"
                     >
-                      + Aggiungi Opzione
+                      Rimuovi
                     </button>
                   </div>
 
-                  <div className="space-y-1.5">
-                    {inp.options?.map((opt, optIdx) => (
-                      <div key={optIdx} className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        Etichetta Visibile
+                      </label>
+                      <input
+                        type="text"
+                        value={inp.label}
+                        onChange={(e) => handleUpdateInput(idx, 'label', e.target.value)}
+                        className="field text-xs"
+                        placeholder="Es: Volume Mensile"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        Identificatore Variabile
+                      </label>
+                      <input
+                        type="text"
+                        value={inp.variable}
+                        onChange={(e) =>
+                          handleUpdateInput(
+                            idx,
+                            'variable',
+                            e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+                          )
+                        }
+                        className="field field-mono text-xs text-accent-hi"
+                        placeholder="Es: volume"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        Tipologia
+                      </label>
+                      <select
+                        value={inp.type}
+                        onChange={(e) => handleUpdateInput(idx, 'type', e.target.value)}
+                        className="field text-xs"
+                      >
+                        <option value="slider">Slider</option>
+                        <option value="number">Campo Numerico</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        Valore Iniziale
+                      </label>
+                      <input
+                        type="number"
+                        value={inp.defaultValue}
+                        onChange={(e) => handleUpdateInput(idx, 'defaultValue', parseFloat(e.target.value) || 0)}
+                        className="field field-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        Passo (Step)
+                      </label>
+                      <input
+                        type="number"
+                        value={inp.step ?? 1}
+                        onChange={(e) => handleUpdateInput(idx, 'step', parseFloat(e.target.value) || 1)}
+                        className="field field-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Minimo</label>
+                      <input
+                        type="number"
+                        value={inp.min ?? 0}
+                        onChange={(e) => handleUpdateInput(idx, 'min', parseFloat(e.target.value) || 0)}
+                        className="field field-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Massimo</label>
+                      <input
+                        type="number"
+                        value={inp.max ?? 100}
+                        onChange={(e) => handleUpdateInput(idx, 'max', parseFloat(e.target.value) || 100)}
+                        className="field field-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Prefisso</label>
+                      <input
+                        type="text"
+                        value={inp.prefix || ''}
+                        onChange={(e) => handleUpdateInput(idx, 'prefix', e.target.value)}
+                        placeholder="Es: €"
+                        className="field text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Suffisso</label>
+                      <input
+                        type="text"
+                        value={inp.suffix || ''}
+                        onChange={(e) => handleUpdateInput(idx, 'suffix', e.target.value)}
+                        placeholder="Es: / mese"
+                        className="field text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={handleAddInput}
+                className="btn btn-ghost w-full !py-3 text-xs border-dashed"
+              >
+                + Aggiungi Parametro Input
+              </button>
+            </div>
+          )}
+
+          {/* TAB 2: OUTPUTS & FORMULE */}
+          {activeTab === 'outputs' && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-surface border border-line text-xs text-muted leading-relaxed">
+                <span className="font-bold text-ink">Guida formule:</span> Usa i nomi delle variabili definiti
+                negli input (es. <code className="text-cyan">{inputs.map((i) => i.variable).join(', ')}</code>).
+                Supporta operatori aritmetici <code className="text-accent-hi">+ - * /</code>, parentesi e
+                operatore ternario <code className="text-mint">condizione ? se_vero : se_falso</code>.
+              </div>
+
+              {outputs.map((out, idx) => {
+                const validation = formulaValidation[out.id || out.variable];
+                return (
+                  <div key={out.id || idx} className="panel p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-[10px] text-faint">VOCE RISULTATO #{idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveOutput(idx)}
+                        disabled={outputs.length <= 1}
+                        className="text-xs text-rose hover:underline disabled:opacity-30 disabled:no-underline cursor-pointer"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                          Nome Risultato
+                        </label>
                         <input
                           type="text"
-                          placeholder="Etichetta (es. Piano Pro)"
-                          value={opt.label}
-                          onChange={(e) => updateSelectOption(idx, optIdx, 'label', e.target.value)}
-                          className="flex-1 text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-900"
+                          value={out.label}
+                          onChange={(e) => handleUpdateOutput(idx, 'label', e.target.value)}
+                          className="field text-xs"
+                          placeholder="Es: Risparmio Totale"
                         />
+                      </div>
+                      <div>
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                          Variabile Risultato
+                        </label>
                         <input
-                          type="number"
-                          placeholder="Valore"
-                          value={opt.value}
-                          onChange={(e) => updateSelectOption(idx, optIdx, 'value', e.target.value)}
-                          className="w-20 text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-900"
+                          type="text"
+                          value={out.variable}
+                          onChange={(e) =>
+                            handleUpdateOutput(
+                              idx,
+                              'variable',
+                              e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+                            )
+                          }
+                          className="field field-mono text-xs text-accent-hi"
+                          placeholder="Es: risparmio_totale"
                         />
-                        {(inp.options?.length || 0) > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSelectOption(idx, optIdx)}
-                            className="text-xs text-red-500 hover:text-red-700 px-1"
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint">
+                          Formula Matematica
+                        </label>
+                        {validation && (
+                          <span
+                            className={`font-mono text-[9px] ${
+                              validation.isValid ? 'text-mint' : 'text-rose'
+                            }`}
                           >
-                            ✕
-                          </button>
+                            {validation.isValid
+                              ? `✓ Valida (Test: ${validation.sampleResult})`
+                              : `✕ ${validation.sampleResult}`}
+                          </span>
                         )}
                       </div>
-                    ))}
+                      <input
+                        type="text"
+                        value={out.formula}
+                        onChange={(e) => handleUpdateOutput(idx, 'formula', e.target.value)}
+                        className={`field field-mono text-xs ${
+                          validation && !validation.isValid ? 'border-rose focus:border-rose' : ''
+                        }`}
+                        placeholder="Es: volume * 1.2"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 items-center">
+                      <div>
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Prefisso</label>
+                        <input
+                          type="text"
+                          value={out.prefix || ''}
+                          onChange={(e) => handleUpdateOutput(idx, 'prefix', e.target.value)}
+                          placeholder="€"
+                          className="field text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Suffisso</label>
+                        <input
+                          type="text"
+                          value={out.suffix || ''}
+                          onChange={(e) => handleUpdateOutput(idx, 'suffix', e.target.value)}
+                          placeholder="/ anno"
+                          className="field text-xs"
+                        />
+                      </div>
+                      <div className="pt-4">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-muted select-none">
+                          <input
+                            type="checkbox"
+                            checked={out.highlight || false}
+                            onChange={(e) => handleUpdateOutput(idx, 'highlight', e.target.checked)}
+                            className="checkbox"
+                          />
+                          Evidenzia Principale
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={handleAddOutput}
+                className="btn btn-ghost w-full !py-3 text-xs border-dashed"
+              >
+                + Aggiungi Voce Risultato
+              </button>
+            </div>
+          )}
+
+          {/* TAB 3: LEAD GATE */}
+          {activeTab === 'gate' && (
+            <div className="panel p-5 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-line">
+                <div>
+                  <h4 className="text-sm font-semibold text-ink">Abilita Blocco Risultati (Lead Gate)</h4>
+                  <p className="text-xs text-muted">
+                    I risultati vengono nascosti finché il visitatore non lascia email e nome.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={enableLeadGate}
+                  onChange={(e) => setEnableLeadGate(e.target.checked)}
+                  className="checkbox"
+                />
+              </div>
+
+              {enableLeadGate && (
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      URL Privacy Policy
+                    </label>
+                    <input
+                      type="url"
+                      value={privacyPolicyUrl}
+                      onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+                      placeholder="https://tuosito.it/privacy"
+                      className="field text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      Testo Consenso Privacy
+                    </label>
+                    <input
+                      type="text"
+                      value={privacyText}
+                      onChange={(e) => setPrivacyText(e.target.value)}
+                      className="field text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      Azione dopo l’invio del contatto
+                    </label>
+                    <select
+                      value={postSubmitAction}
+                      onChange={(e) => setPostSubmitAction(e.target.value as any)}
+                      className="field text-xs"
+                    >
+                      <option value="unlock">Sblocca e mostra i risultati a schermo</option>
+                      <option value="redirect">Reindirizza a una pagina esterna</option>
+                    </select>
+                  </div>
+
+                  {postSubmitAction === 'redirect' && (
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        URL di Reindirizzamento
+                      </label>
+                      <input
+                        type="url"
+                        value={redirectUrl}
+                        onChange={(e) => setRedirectUrl(e.target.value)}
+                        placeholder="https://tuosito.it/grazie"
+                        className="field text-xs"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      Webhook di Invio Istantaneo (Make, Zapier, n8n, CRM)
+                    </label>
+                    <input
+                      type="url"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                      placeholder="https://hook.eu1.make.com/..."
+                      className="field field-mono text-xs"
+                    />
+                    <span className="block font-mono text-[9px] text-faint mt-1">
+                      Invia l’intero stato degli input e dei calcoli appena il lead viene registrato.
+                    </span>
                   </div>
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* Risultati */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Risultati & Formule</label>
-            <span className="text-[10px] text-slate-400 font-mono">Supporta ? : &gt; &lt; min() max()</span>
-          </div>
-          {outputs.map((out, idx) => (
-            <div key={out.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+          {/* TAB 4: STILE & STATO */}
+          {activeTab === 'style' && (
+            <div className="panel p-5 space-y-6">
               <div>
-                <label className="text-xs text-slate-500">Titolo Risultato</label>
-                <input
-                  type="text"
-                  value={out.label}
-                  onChange={(e) => updateOutput(idx, 'label', e.target.value)}
-                  className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                />
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-faint mb-3">
+                  Colore Primario del Terminale
+                </label>
+                <div className="flex items-center gap-3">
+                  {SWATCHES.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setPrimaryColor(s.value)}
+                      title={s.label}
+                      className={`w-9 h-9 rounded-lg border transition cursor-pointer ${
+                        primaryColor === s.value ? 'scale-110 border-white shadow-md' : 'border-line'
+                      }`}
+                      style={{ backgroundColor: s.value }}
+                    />
+                  ))}
+                  <input
+                    type="text"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="field field-mono text-xs !w-28 uppercase"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-500">Formula Matematica / Logica</label>
-                <input
-                  type="text"
-                  value={out.formula}
-                  onChange={(e) => updateOutput(idx, 'formula', e.target.value)}
-                  className="w-full font-mono text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
-                />
+              <div className="pt-4 border-t border-line flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-ink">Stato Pubblicazione</h4>
+                  <p className="text-xs text-muted">Se disattivato, l’embed mostrerà un avviso di manutenzione.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPublished(!isPublished)}
+                  className={`btn btn-sm ${isPublished ? 'btn-soft' : 'btn-ghost'}`}
+                >
+                  {isPublished ? 'Online' : 'In Pausa'}
+                </button>
               </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
 
-      <div className="lg:col-span-7 flex flex-col justify-center items-center p-8">
-        <div className="w-full max-w-xl">
-          <div className="mb-4 text-center">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Anteprima Live Widget</span>
+        {/* Colonna DX: Anteprima Live sticky */}
+        <div className={`lg:col-span-6 sticky top-24 ${mobileView === 'editor' ? 'hidden lg:block' : ''}`}>
+          <div className="flex items-center justify-between pb-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
+              Anteprima Tempo Reale
+            </span>
+            <span className="badge badge-accent">Live Preview</span>
           </div>
-          <CalculatorPreview
-            calculatorId={calculatorId || undefined}
-            inputs={inputs}
-            outputs={outputs}
-            primaryColor={primaryColor}
-            enableLeadGate={enableLeadGate}
-            privacyPolicyUrl={privacyPolicyUrl}
-            privacyText={privacyText}
-            postSubmitAction={postSubmitAction}
-            redirectUrl={redirectUrl}
-            webhookUrl={webhookUrl}
-          />
+
+          <div className="p-4 rounded-xl border border-line-strong/40 bg-surface/50 backdrop-blur-sm shadow-2xl">
+            <CalculatorPreview
+              calculatorId={initialData?.id || 'preview'}
+              inputs={inputs}
+              outputs={outputs}
+              primaryColor={primaryColor}
+              enableLeadGate={enableLeadGate}
+              privacyPolicyUrl={privacyPolicyUrl}
+              privacyText={privacyText}
+              postSubmitAction={postSubmitAction}
+              redirectUrl={redirectUrl}
+              webhookUrl={webhookUrl}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base font-bold text-slate-900">Codice Calcolatore Pronto!</h3>
+      {/* Modal Snippet Embed */}
+      {showEmbedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-md">
+          <div className="panel p-6 max-w-lg w-full space-y-4 shadow-2xl border-line-strong">
+            <div className="flex items-center justify-between pb-2 border-b border-line">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+                Incorporamento Calcolatore
+              </h3>
               <button
-                onClick={() => setShowShareModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
+                type="button"
+                onClick={() => setShowEmbedModal(false)}
+                className="text-muted hover:text-ink cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Link Diretto</label>
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  type="text"
-                  value={getEmbedUrl()}
-                  className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700"
-                />
-                <button
-                  onClick={() => copyToClipboard(getEmbedUrl(), 'link')}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition cursor-pointer whitespace-nowrap"
-                >
-                  {copiedType === 'link' ? 'Copiato!' : 'Copia Link'}
-                </button>
-              </div>
-            </div>
+            <p className="text-xs text-muted leading-relaxed">
+              Copia questo codice HTML e incollalo in qualsiasi CMS (WordPress, Webflow, Shopify, Framer) o
+              codice sorgente:
+            </p>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Codice Embed Responsive</label>
-                <span className="text-[10px] text-emerald-600 font-medium">✓ Auto-resize mobile attivo</span>
-              </div>
-              <textarea
-                readOnly
-                rows={5}
-                value={getIframeCode()}
-                className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 resize-none"
-              />
+            <pre className="code-block p-4 text-[11px] text-accent-hi overflow-x-auto selection:bg-accent/40">
+              {embedCode}
+            </pre>
+
+            <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => copyToClipboard(getIframeCode(), 'iframe')}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition cursor-pointer"
+                type="button"
+                onClick={() => setShowEmbedModal(false)}
+                className="btn btn-ghost btn-sm"
               >
-                {copiedType === 'iframe' ? 'Codice Copiato!' : 'Copia Codice iFrame'}
+                Chiudi
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Paywall Modal */}
-      {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl font-black">
-              ★
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-900">Passa a CalcFlow Pro</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Il piano Gratuito include 1 calcolatore. Effettua l'upgrade a Pro per crearne senza limiti.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2.5 text-xs text-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span><strong>Calcolatori illimitati</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span><strong>Lead e preventivi illimitati</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>Webhooks istantanei (Zapier / Make / CRM)</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-2xl font-black text-slate-900">
-                29€ <span className="text-xs font-normal text-slate-500">/ mese</span>
-              </div>
-
               <button
-                onClick={() => {
-                  alert('Integrazione Stripe Checkout pronta per essere collegata!');
-                }}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg transition cursor-pointer"
+                type="button"
+                onClick={copyEmbed}
+                className="btn btn-primary btn-sm"
               >
-                Attiva Abbonamento Pro
-              </button>
-
-              <button
-                onClick={() => setShowUpgradeModal(false)}
-                className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
-              >
-                Continua con il piano gratuito
+                {copiedSnippet ? '✓ Copiato!' : 'Copia Snippet'}
               </button>
             </div>
           </div>
