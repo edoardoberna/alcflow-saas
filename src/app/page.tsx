@@ -5,7 +5,7 @@ import Link from 'next/link';
 import CalculatorPreview from '@/components/CalculatorPreview';
 
 /* ==========================================================================
-   ICONE INLINE — Zero dipendenze esterne
+   ICONE INLINE
    ========================================================================== */
 
 type IconProps = { className?: string; size?: number };
@@ -34,10 +34,10 @@ const IconCheck = ({ className, size = 12 }: IconProps) => (
 const IconX = ({ className, size = 12 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m5 5 10 10M15 5 5 15" /></svg>
 );
-const IconMenu = ({ className, size = 18 }: IconProps) => (
+const IconMenu = ({ className, size = 20 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="M3 6h14M3 10h14M3 14h14" /></svg>
 );
-const IconClose = ({ className, size = 18 }: IconProps) => (
+const IconClose = ({ className, size = 20 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="m5 5 10 10M15 5 5 15" /></svg>
 );
 const IconCopy = ({ className, size = 14 }: IconProps) => (
@@ -78,19 +78,39 @@ const IconInbox = ({ className, size = 20 }: IconProps) => (
   </svg>
 );
 
-function Mark({ className = 'text-accent', size = 20 }: IconProps & { className?: string }) {
+/* Logo Ufficiale Sigma-Flow */
+function Mark({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
-      <path d="M10 1.5 18 6v8l-8 4.5L2 14V6l8-4.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M10 1.5V10m0 0 8-4m-8 4-8-4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" opacity="0.5" />
-      <path d="M10 10v8.5L18 14V6" fill="currentColor" fillOpacity="0.15" stroke="none" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" className="flex-none">
+      <defs>
+        <linearGradient id="siteSigmaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4D7CFE" />
+          <stop offset="45%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#2CE0A5" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M23.5 9H9.5L16.2 16L9.5 23H20.5"
+        stroke="url(#siteSigmaGrad)"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.5 19.5L22.5 23L17.5 26.5"
+        stroke="#2CE0A5"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="16.2" cy="16" r="1.5" fill="#FFFFFF" />
     </svg>
   );
 }
 
 /* ==========================================================================
    HOOKS
-   ========================================================================= */
+   ========================================================================== */
 
 function useReveal<T extends HTMLElement>(threshold = 0.12) {
   const ref = useRef<T | null>(null);
@@ -143,7 +163,7 @@ function useTilt(max = 5) {
 }
 
 /* ==========================================================================
-   CANVAS 3D — Grafo Fibonacci a nodi e vettori prospettici
+   CANVAS 3D FIBONACCI
    ========================================================================== */
 
 function HeroCanvas() {
@@ -384,10 +404,10 @@ function FaqItem({
         aria-expanded={open}
         className="w-full flex items-center gap-4 py-5 text-left group cursor-pointer"
       >
-        <span className={`font-mono text-[10px] flex-none transition-colors ${open ? 'text-accent-hi' : 'text-faint'}`}>
+        <span className={`font-mono text-[11px] flex-none transition-colors ${open ? 'text-accent-hi font-bold' : 'text-faint'}`}>
           {String(index + 1).padStart(2, '0')}
         </span>
-        <span className={`text-[15px] font-medium flex-1 transition-colors ${open ? 'text-ink' : 'text-ink/80 group-hover:text-ink'}`}>
+        <span className={`text-[15px] font-medium flex-1 transition-colors ${open ? 'text-ink' : 'text-slate-200 group-hover:text-white'}`}>
           {question}
         </span>
         <span className={`w-7 h-7 rounded-md border flex items-center justify-center flex-none transition-all duration-300 ${
@@ -545,7 +565,7 @@ const SWATCHES = [
 ];
 
 /* ==========================================================================
-   HEADER
+   HEADER CENTRATO & AD ALTA VISIBILITÀ
    ========================================================================== */
 
 function Header() {
@@ -553,42 +573,54 @@ function Header() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50">
-      <div className="relative bg-void/80 backdrop-blur-xl border-b border-line">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[60px] flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 group" onClick={() => setOpen(false)}>
-            <Mark size={21} />
-            <span className="font-mono text-[15px] font-bold tracking-[0.08em] text-ink">
+      <div className="relative bg-void/85 backdrop-blur-xl border-b border-line">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[68px] flex items-center justify-between relative">
+          
+          {/* Logo SX con Sigma-Flow */}
+          <Link href="/" className="flex items-center gap-3 z-10" onClick={() => setOpen(false)}>
+            <Mark size={28} />
+            <span className="font-mono text-[16px] sm:text-[18px] font-bold tracking-[0.1em] text-white">
               CALCFLOW
             </span>
-            <span className="hidden lg:inline chip !py-0.5 !px-1.5 !text-[8px] ml-1">
+            <span className="hidden xl:inline chip !py-0.5 !px-2 !text-[9px] border-line-strong text-slate-400">
               v2.6
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-7" aria-label="Navigazione principale">
+          {/* Voci di navigazione matematicamente centrate e ingrandite */}
+          <nav
+            className="hidden md:flex items-center gap-8 lg:gap-10 absolute left-1/2 -translate-x-1/2 z-10"
+            aria-label="Navigazione principale"
+          >
             {NAV_LINKS.map((l) => (
-              <a key={l.href} href={l.href} className="nav-link">
+              <a
+                key={l.href}
+                href={l.href}
+                className="font-mono text-[13px] lg:text-[14px] font-semibold tracking-[0.14em] uppercase text-slate-300 hover:text-white transition-colors duration-150 py-1 hover:drop-shadow-[0_0_8px_rgba(77,124,254,0.6)]"
+              >
                 {l.label}
               </a>
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
-            <span className="hidden xl:flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-faint mr-1">
+          {/* Azioni DX */}
+          <div className="hidden md:flex items-center gap-3.5 z-10">
+            <span className="hidden lg:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400 mr-2">
               <span className="dot-live" />
-              Systems operational
+              SYSTEMS OPERATIONAL
             </span>
-            <Link href="/login" className="btn btn-ghost btn-sm">
+            <Link href="/login" className="btn btn-ghost btn-sm !text-slate-200 hover:!text-white !text-[12px]">
               Accedi
             </Link>
-            <Link href="/login?mode=signup" className="btn btn-primary btn-sm">
+            <Link href="/login?mode=signup" className="btn btn-primary btn-sm !text-[12px] !shadow-[0_0_20px_rgba(77,124,254,0.4)]">
               Inizia gratis
               <IconArrowUpRight />
             </Link>
           </div>
 
+          {/* Hamburger mobile */}
           <button
-            className="md:hidden btn-icon"
+            className="md:hidden btn-icon z-10"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? 'Chiudi menu' : 'Apri menu'}
@@ -600,25 +632,26 @@ function Header() {
         <ScrollProgress />
       </div>
 
+      {/* Menu mobile a comparsa */}
       <div className={`md:hidden overflow-hidden transition-all duration-300 bg-void/95 backdrop-blur-xl border-b border-line ${
         open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
       }`}>
-        <nav className="px-5 py-4 flex flex-col gap-1" aria-label="Navigazione mobile">
+        <nav className="px-6 py-5 flex flex-col gap-2" aria-label="Navigazione mobile">
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-muted hover:text-ink transition-colors border-b border-line/50 last:border-0"
+              className="py-3 font-mono text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-200 hover:text-white transition-colors border-b border-line/50 last:border-0"
             >
               {l.label}
             </a>
           ))}
           <div className="flex gap-3 pt-3">
-            <Link href="/login" className="btn btn-ghost btn-sm flex-1" onClick={() => setOpen(false)}>
+            <Link href="/login" className="btn btn-ghost btn-sm flex-1 !text-[13px]" onClick={() => setOpen(false)}>
               Accedi
             </Link>
-            <Link href="/login?mode=signup" className="btn btn-primary btn-sm flex-1" onClick={() => setOpen(false)}>
+            <Link href="/login?mode=signup" className="btn btn-primary btn-sm flex-1 !text-[13px]" onClick={() => setOpen(false)}>
               Inizia gratis
             </Link>
           </div>
@@ -629,12 +662,12 @@ function Header() {
 }
 
 /* ==========================================================================
-   SEZIONI
+   SEZIONI PAGINA
    ========================================================================== */
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-[60px]">
+    <section className="relative overflow-hidden pt-[68px]">
       <div className="absolute inset-0 glow-hero pointer-events-none" />
       <div className="absolute inset-0 bg-grid grid-fade pointer-events-none" />
       <div className="absolute inset-0 pointer-events-none">
@@ -1143,9 +1176,9 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-5 lg:px-8 py-14">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="lg:col-span-2 space-y-4 max-w-sm">
-            <div className="flex items-center gap-2.5">
-              <Mark size={20} />
-              <span className="font-mono text-[15px] font-bold tracking-[0.08em] text-ink">
+            <div className="flex items-center gap-3">
+              <Mark size={26} />
+              <span className="font-mono text-[16px] font-bold tracking-[0.08em] text-white">
                 CALCFLOW
               </span>
             </div>
@@ -1165,7 +1198,7 @@ function Footer() {
             <ul className="space-y-2.5">
               {NAV_LINKS.map((l) => (
                 <li key={l.href}>
-                  <a href={l.href} className="text-[13px] text-muted hover:text-ink transition-colors">
+                  <a href={l.href} className="text-[13px] text-muted hover:text-white transition-colors">
                     {l.label}
                   </a>
                 </li>
@@ -1177,17 +1210,17 @@ function Footer() {
             <h4 className="font-mono text-[9px] uppercase tracking-[0.24em] text-faint mb-4">Accesso</h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/login" className="text-[13px] text-muted hover:text-ink transition-colors">
+                <Link href="/login" className="text-[13px] text-muted hover:text-white transition-colors">
                   Accedi al terminale
                 </Link>
               </li>
               <li>
-                <Link href="/login?mode=signup" className="text-[13px] text-muted hover:text-ink transition-colors">
+                <Link href="/login?mode=signup" className="text-[13px] text-muted hover:text-white transition-colors">
                   Crea un account
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="text-[13px] text-muted hover:text-ink transition-colors">
+                <Link href="/dashboard" className="text-[13px] text-muted hover:text-white transition-colors">
                   Dashboard lead
                 </Link>
               </li>
@@ -1209,7 +1242,7 @@ function Footer() {
 }
 
 /* ==========================================================================
-   PAGINA ENTRYPOINT
+   ENTRYPOINT PAGINA
    ========================================================================== */
 
 export default function LandingPage() {
