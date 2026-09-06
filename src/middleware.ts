@@ -5,19 +5,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasAuth = request.cookies.has('calcflow_auth');
 
-  const isProtectedRoute = pathname === '/' || pathname.startsWith('/dashboard');
-  const isAuthRoute = pathname.startsWith('/login');
+  // Solo la dashboard e i suoi sotto-percorsi sono protetti
+  const isProtectedRoute = pathname.startsWith('/dashboard');
 
-  // Blocca accessi non autenticati lato server
+  // 1. Se tenti di entrare nella dashboard senza essere autenticato -> vai a /login
   if (isProtectedRoute && !hasAuth) {
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Evita che un utente già loggato riveda la schermata di login
-  if (isAuthRoute && hasAuth) {
-    const homeUrl = new URL('/', request.url);
-    return NextResponse.redirect(homeUrl);
   }
 
   return NextResponse.next();
@@ -25,8 +19,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
-    '/dashboard/:path*',
-    '/login'
+    '/dashboard/:path*'
   ]
 };
