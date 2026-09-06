@@ -5,6 +5,56 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+function Mark({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="flex-none drop-shadow-[0_0_12px_rgba(77,124,254,0.4)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="loginSigmaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4D7CFE" />
+          <stop offset="45%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#2CE0A5" />
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="120" fill="#080C14" />
+      <rect
+        width="496"
+        height="496"
+        x="8"
+        y="8"
+        rx="112"
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.12)"
+        strokeWidth="10"
+      />
+      <path
+        d="M 380 144 H 156 L 262 256 L 156 368 H 336"
+        fill="none"
+        stroke="url(#loginSigmaGrad)"
+        strokeWidth="52"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 285 316 L 378 368 L 285 420"
+        fill="none"
+        stroke="#2CE0A5"
+        strokeWidth="52"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="262" cy="256" r="26" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -12,6 +62,11 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const setAuthCookie = () => {
+    // 7 giorni di persistenza sessione per il middleware Next.js
+    document.cookie = "calcflow_auth=true; path=/; max-age=604800; SameSite=Lax";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +77,12 @@ export default function LoginPage() {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        setAuthCookie();
         router.push('/dashboard');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setAuthCookie();
         router.push('/dashboard');
       }
     } catch (err: any) {
@@ -36,86 +93,98 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-        
-        {/* Intestazione Iniziale */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isSignUp ? 'Crea un account CalcFlow' : 'Accedi a CalcFlow'}
+    <div className="min-h-screen bg-void text-ink flex flex-col justify-center items-center p-4 relative selection:bg-accent/30">
+      <div className="fixed inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute inset-0 bg-grid opacity-30" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-accent/[0.08] blur-[120px] rounded-full" />
+      </div>
+
+      <div className="w-full max-w-md panel p-8 relative z-10 shadow-2xl border-line-strong">
+        <div className="flex flex-col items-center text-center mb-7">
+          <Link href="/" className="mb-4 group">
+            <Mark size={42} />
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            {isSignUp ? 'Crea Terminale CalcFlow' : 'Accesso Console Operativa'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {isSignUp
-              ? 'Inserisci i tuoi dati per iniziare'
-              : 'Inserisci le tue credenziali per accedere'}
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-400 mt-1.5">
+            {isSignUp ? 'Inizializzazione credenziali' : 'Inserisci le credenziali di registro'}
           </p>
         </div>
 
         {errorMessage && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg">
-            {errorMessage}
+          <div className="mb-5 p-3.5 bg-rose/10 border border-rose/30 text-rose font-mono text-xs rounded-lg flex items-center gap-2">
+            <span>✕</span>
+            <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Form Login */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Email aziendale
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-slate-300 mb-1.5 font-semibold">
+              Email di Sistema
             </label>
             <input
               type="email"
               required
-              placeholder="nome@azienda.it"
+              placeholder="operatore@azienda.it"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+              className="field text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-slate-300 mb-1.5 font-semibold">
               Password
             </label>
             <input
               type="password"
               required
-              placeholder="••••••••"
+              placeholder="••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+              className="field text-sm"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-md transition disabled:opacity-50 cursor-pointer"
+            className="btn btn-primary w-full !py-3 font-semibold text-sm cursor-pointer shadow-[0_0_20px_rgba(77,124,254,0.4)]"
           >
-            {loading ? 'Caricamento...' : isSignUp ? 'Registrati' : 'Accedi'}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Autenticazione in corso…
+              </span>
+            ) : isSignUp ? (
+              'Crea Account e Procedi'
+            ) : (
+              'Autentica e Accedi'
+            )}
           </button>
         </form>
 
-        {/* Switcher Login / Registrazione */}
-        <div className="mt-6 text-center text-xs text-slate-500">
+        <div className="mt-6 pt-5 border-t border-line text-center">
           {isSignUp ? (
-            <p>
-              Hai già un account?{' '}
+            <p className="text-xs text-slate-400">
+              Hai già un account configurato?{' '}
               <button
                 type="button"
                 onClick={() => setIsSignUp(false)}
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-accent-hi font-semibold hover:underline cursor-pointer"
               >
                 Accedi qui
               </button>
             </p>
           ) : (
-            <p>
-              Non hai un account?{' '}
+            <p className="text-xs text-slate-400">
+              Nuovo terminale aziendale?{' '}
               <button
                 type="button"
                 onClick={() => setIsSignUp(true)}
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-accent-hi font-semibold hover:underline cursor-pointer"
               >
                 Registrati qui
               </button>
@@ -123,12 +192,11 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-100 text-center">
-          <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
-            ← Torna alla home
+        <div className="mt-4 text-center">
+          <Link href="/" className="font-mono text-[11px] text-faint hover:text-slate-300 transition">
+            ← Torna alla pagina iniziale
           </Link>
         </div>
-
       </div>
     </div>
   );

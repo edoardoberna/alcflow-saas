@@ -32,7 +32,7 @@ interface LeadItem {
 }
 
 /* ==========================================================================
-   ICONE VETTORIALI
+   ICONE VETTORIALI INLINE
    ========================================================================== */
 
 type IconProps = { className?: string; size?: number };
@@ -94,19 +94,55 @@ const IconRatio = ({ className, size = 14 }: IconProps) => (
   <svg {...base(size)} className={className}><path d="M4 16 16 4M16 4h-5M16 4v5M4 16h5M4 16v-5" /></svg>
 );
 
-function Mark({ className = 'text-accent', size = 20 }: IconProps & { className?: string }) {
+function Mark({ size = 26 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
-      <path d="M10 1.5 18 6v8l-8 4.5L2 14V6l8-4.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M10 1.5V10m0 0 8-4m-8 4-8-4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" opacity="0.5" />
-      <path d="M10 10v8.5L18 14V6" fill="currentColor" fillOpacity="0.15" stroke="none" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="flex-none drop-shadow-[0_0_10px_rgba(77,124,254,0.4)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="dashSigmaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4D7CFE" />
+          <stop offset="45%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#2CE0A5" />
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="120" fill="#080C14" />
+      <rect
+        width="496"
+        height="496"
+        x="8"
+        y="8"
+        rx="112"
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.12)"
+        strokeWidth="10"
+      />
+      <path
+        d="M 380 144 H 156 L 262 256 L 156 368 H 336"
+        fill="none"
+        stroke="url(#dashSigmaGrad)"
+        strokeWidth="52"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 285 316 L 378 368 L 285 420"
+        fill="none"
+        stroke="#2CE0A5"
+        strokeWidth="52"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="262" cy="256" r="26" fill="#FFFFFF" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   FORMATTAZIONE & DETERMINISTIC PRNG
-   ========================================================================== */
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -170,10 +206,6 @@ function Sparkline({
   );
 }
 
-/* ==========================================================================
-   KPI CARD
-   ========================================================================== */
-
 function KpiCard({
   icon: Icon,
   label,
@@ -231,10 +263,6 @@ function KpiCard({
   );
 }
 
-/* ==========================================================================
-   PAGINA DASHBOARD
-   ========================================================================== */
-
 export default function DashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -259,6 +287,9 @@ export default function DashboardPage() {
         return;
       }
       setCurrentUser(user);
+
+      // Assicura cookie auth attivo durante la sessione
+      document.cookie = "calcflow_auth=true; path=/; max-age=604800; SameSite=Lax";
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -315,7 +346,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteCalculator = async (calc: CalculatorItem) => {
-    if (!confirm(`Confermi l'eliminazione di "${calc.title}"? L'operazione è irreversibile.`)) return;
+    if (!confirm(`Confermi l'eliminazione definitiva del terminale "${calc.title}"?`)) return;
 
     setActionLoadingId(calc.id);
     const { error } = await supabase
@@ -333,6 +364,8 @@ export default function DashboardPage() {
   };
 
   const handleLogout = async () => {
+    // Rimozione cookie auth per evitare redirect loop verso la dashboard
+    document.cookie = "calcflow_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     await supabase.auth.signOut();
     router.push('/login');
   };
@@ -340,7 +373,7 @@ export default function DashboardPage() {
   const handleRefresh = async () => {
     if (!currentUser) return;
     await fetchDashboardData(currentUser.id);
-    showToast('Dati aggiornati dal registro');
+    showToast('Dati sincronizzati con il database');
   };
 
   const filteredLeads = selectedCalc === 'all'
@@ -384,10 +417,10 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-void text-ink">
         <header className="fixed top-0 inset-x-0 z-50 bg-void/80 backdrop-blur-xl border-b border-line">
-          <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[60px] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Mark size={21} />
-              <span className="font-mono text-[15px] font-bold tracking-[0.08em]">CALCFLOW</span>
+          <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[64px] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Mark size={28} />
+              <span className="font-mono text-[16px] font-bold tracking-[0.08em]">CALCFLOW</span>
             </div>
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
               <span className="w-3.5 h-3.5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
@@ -396,7 +429,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-5 lg:px-8 pt-[100px] pb-20 space-y-6">
+        <main className="max-w-7xl mx-auto px-5 lg:px-8 pt-[104px] pb-20 space-y-6">
           <div className="space-y-3">
             <div className="skeleton h-3 w-48" />
             <div className="skeleton h-8 w-80" />
@@ -428,22 +461,26 @@ export default function DashboardPage() {
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-accent/[0.06] blur-[100px] rounded-full" />
       </div>
 
-      <header className="fixed top-0 inset-x-0 z-50 bg-void/80 backdrop-blur-xl border-b border-line">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[60px] flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
+      <header className="fixed top-0 inset-x-0 z-50 bg-void/85 backdrop-blur-xl border-b border-line">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-[64px] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
             <Link href="/" className="flex items-center gap-2.5">
-              <Mark size={21} />
-              <span className="font-mono text-[15px] font-bold tracking-[0.08em]">CALCFLOW</span>
+              <Mark size={28} />
+              <span className="font-mono text-[16px] font-bold tracking-[0.08em] text-white">CALCFLOW</span>
             </Link>
-            <span className="hidden md:inline chip !py-0.5 !px-2 !text-[8px]">
-              Console // Registro operativo
+            <span className="hidden md:inline chip !py-0.5 !px-2 !text-[9px] text-slate-300">
+              Console // Registro
             </span>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Link href="/" className="hidden sm:inline-flex btn btn-ghost btn-sm">
+            <Link href="/" className="hidden sm:inline-flex btn btn-ghost btn-sm text-slate-300 hover:text-white">
               <IconArrowLeft />
               Vetrina
+            </Link>
+
+            <Link href="/dashboard/builder" className="btn btn-primary btn-sm">
+              + Nuovo Terminale
             </Link>
 
             <button
@@ -459,7 +496,7 @@ export default function DashboardPage() {
               onClick={exportToCSV}
               disabled={filteredLeads.length === 0}
               title={filteredLeads.length === 0 ? 'Nessun lead da esportare' : 'Esporta il registro in CSV'}
-              className="btn btn-primary btn-sm"
+              className="btn btn-ghost btn-sm text-slate-300 hover:text-white"
             >
               <IconDownload />
               Export CSV
@@ -476,7 +513,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="relative max-w-7xl mx-auto px-5 lg:px-8 pt-[100px] pb-24">
+      <main className="relative max-w-7xl mx-auto px-5 lg:px-8 pt-[104px] pb-24">
         <div className="flex flex-wrap items-end justify-between gap-6 mb-10 anim-fade-up">
           <div>
             <span className="flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
@@ -487,9 +524,9 @@ export default function DashboardPage() {
               Registro operativo
             </h1>
           </div>
-          <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] text-faint truncate max-w-xs">
+          <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-faint truncate max-w-xs">
             <span className="uppercase tracking-[0.16em]">Sessione:</span>
-            <span className="text-muted truncate">{currentUser?.email}</span>
+            <span className="text-slate-300 truncate">{currentUser?.email}</span>
             <span className={`badge ${userPlan === 'pro' ? 'badge-accent' : 'badge-amber'} ml-1`}>
               {userPlan}
             </span>
@@ -549,11 +586,16 @@ export default function DashboardPage() {
               <span className="w-8 h-8 rounded-lg border border-accent/25 bg-accent/[0.08] text-accent-hi flex items-center justify-center">
                 <IconSliders />
               </span>
-              <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-ink">
+              <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
                 Terminali di calcolo
               </h2>
             </div>
-            <span className="chip">N. {calculators.length}</span>
+            <div className="flex items-center gap-3">
+              <span className="chip">N. {calculators.length}</span>
+              <Link href="/dashboard/builder" className="btn btn-primary btn-sm !py-1 !px-3 text-xs">
+                + Nuovo
+              </Link>
+            </div>
           </div>
 
           <div className="panel overflow-hidden">
@@ -566,11 +608,10 @@ export default function DashboardPage() {
                   Nessun terminale in registro
                 </p>
                 <p className="mt-2 text-[13px] text-muted">
-                  Crea il primo calcolatore dalla console per iniziare a raccogliere lead.
+                  Crea il primo calcolatore per iniziare a raccogliere lead qualificati.
                 </p>
-                <Link href="/" className="btn btn-soft btn-sm mt-5">
-                  Vai alla vetrina
-                  <IconArrowUpRight />
+                <Link href="/dashboard/builder" className="btn btn-primary btn-sm mt-5">
+                  + Crea il primo terminale
                 </Link>
               </div>
             ) : (
@@ -581,12 +622,12 @@ export default function DashboardPage() {
                     className="group flex flex-col md:flex-row md:items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <span className="font-mono text-[10px] text-faint tabular w-6 flex-none">
+                      <span className="font-mono text-[11px] text-faint tabular w-6 flex-none">
                         {String(i + 1).padStart(2, '0')}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-[14px] font-semibold text-ink group-hover:text-accent-hi transition-colors truncate">
+                          <h3 className="text-[15px] font-semibold text-ink group-hover:text-accent-hi transition-colors truncate">
                             {calc.title}
                           </h3>
                           <span className={`badge ${calc.is_published ? 'badge-mint' : 'badge-amber'}`}>
@@ -600,11 +641,17 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap md:flex-none">
+                    <div className="flex items-center gap-2.5 flex-wrap md:flex-none">
+                      <Link
+                        href={`/dashboard/builder?id=${calc.id}`}
+                        className="btn btn-ghost btn-sm text-slate-300 hover:text-white"
+                      >
+                        Modifica
+                      </Link>
                       <button
                         onClick={() => handleTogglePublish(calc)}
                         disabled={actionLoadingId === calc.id}
-                        className="btn btn-ghost btn-sm"
+                        className="btn btn-ghost btn-sm text-slate-300 hover:text-white"
                       >
                         {calc.is_published ? 'Pausa' : 'Attiva'}
                       </button>
@@ -636,7 +683,7 @@ export default function DashboardPage() {
               <span className="relative flex w-8 h-8 items-center justify-center rounded-lg border border-mint/25 bg-mint/[0.07] text-mint">
                 <IconInbox size={14} />
               </span>
-              <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-ink">
+              <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
                 Flusso lead in ingresso
               </h2>
               <span className="badge badge-mint">{filteredLeads.length} record</span>
@@ -673,7 +720,7 @@ export default function DashboardPage() {
                   Nessuna voce nel flusso
                 </p>
                 <p className="mt-2 text-[13px] text-muted">
-                  Pubblica un terminale: i lead compariranno qui in tempo reale.
+                  Pubblica un terminale: i lead compilati dai visitatori compariranno qui in tempo reale.
                 </p>
               </div>
             ) : (

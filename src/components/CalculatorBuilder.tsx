@@ -47,7 +47,6 @@ export default function CalculatorBuilder({
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  // Stato completo del Calcolatore
   const [title, setTitle] = useState(initialData?.title || 'Nuovo Terminale di Stima');
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor || '#4D7CFE');
@@ -62,7 +61,6 @@ export default function CalculatorBuilder({
   const [redirectUrl, setRedirectUrl] = useState(initialData?.redirectUrl || '');
   const [webhookUrl, setWebhookUrl] = useState(initialData?.webhookUrl || '');
 
-  // Parametri di Input
   const [inputs, setInputs] = useState<CalculatorInput[]>(
     initialData?.inputs?.length
       ? initialData.inputs
@@ -94,7 +92,6 @@ export default function CalculatorBuilder({
         ]
   );
 
-  // Risultati e Formule
   const [outputs, setOutputs] = useState<CalculatorOutput[]>(
     initialData?.outputs?.length
       ? initialData.outputs
@@ -120,7 +117,6 @@ export default function CalculatorBuilder({
         ]
   );
 
-  // Validazione formule in tempo reale
   const formulaValidation = useMemo(() => {
     const mockValues: Record<string, number> = {};
     inputs.forEach((inp) => {
@@ -140,7 +136,7 @@ export default function CalculatorBuilder({
             sampleResult: val.toLocaleString('it-IT', { maximumFractionDigits: 2 })
           };
         } else {
-          status[out.id || out.variable] = { isValid: false, sampleResult: 'Risultato non numerico' };
+          status[out.id || out.variable] = { isValid: false, sampleResult: 'Risultato non valido' };
         }
       } catch (err: any) {
         status[out.id || out.variable] = { isValid: false, sampleResult: err.message || 'Errore sintassi' };
@@ -149,7 +145,6 @@ export default function CalculatorBuilder({
     return status;
   }, [inputs, outputs]);
 
-  // Gestione Input
   const handleAddInput = () => {
     const nextIdx = inputs.length + 1;
     const nextId = `inp_${Date.now().toString().slice(-4)}`;
@@ -180,7 +175,6 @@ export default function CalculatorBuilder({
     setInputs((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Gestione Output
   const handleAddOutput = () => {
     const nextIdx = outputs.length + 1;
     const nextId = `out_${Date.now().toString().slice(-4)}`;
@@ -227,12 +221,28 @@ export default function CalculatorBuilder({
     });
   };
 
-  const embedCode = `<iframe
-  src="${typeof window !== 'undefined' ? window.location.origin : 'https://calcflow.io'}/embed/${initialData?.id || 'IL_TUO_ID'}"
-  style="width:100%;height:680px;border:0;border-radius:14px;overflow:hidden;"
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://calcflow.io';
+  const targetCalcId = initialData?.id || 'ID_CALCOLATORE';
+
+  // Snippet con listener postMessage nativo per auto-resize
+  const embedCode = `<!-- CalcFlow Terminal Embed -->
+<iframe
+  id="cf-frame-${targetCalcId}"
+  src="${currentOrigin}/embed/${targetCalcId}"
+  style="width:100%;min-height:640px;border:0;border-radius:14px;overflow:hidden;transition:height 0.2s ease;"
   loading="lazy"
   title="${title}">
-</iframe>`;
+</iframe>
+<script>
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'CALCFLOW_RESIZE' && e.data.calculatorId === '${targetCalcId}') {
+      var f = document.getElementById('cf-frame-${targetCalcId}');
+      if (f && e.data.height) {
+        f.style.height = (e.data.height + 16) + 'px';
+      }
+    }
+  });
+</script>`;
 
   const copyEmbed = async () => {
     await navigator.clipboard.writeText(embedCode);
@@ -242,7 +252,6 @@ export default function CalculatorBuilder({
 
   return (
     <div className="w-full">
-      {/* Testata di salvataggio */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-line mb-6">
         <div className="flex items-center gap-3">
           <input
@@ -263,7 +272,7 @@ export default function CalculatorBuilder({
             <button
               type="button"
               onClick={() => setShowEmbedModal(true)}
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm text-slate-300 hover:text-white"
             >
               Codice Embed &lt;/&gt;
             </button>
@@ -273,7 +282,7 @@ export default function CalculatorBuilder({
             type="button"
             onClick={handleSubmit}
             disabled={saving}
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm cursor-pointer"
           >
             {saving ? (
               <span className="inline-flex items-center gap-2">
@@ -287,12 +296,11 @@ export default function CalculatorBuilder({
         </div>
       </div>
 
-      {/* Switcher Mobile: Editor vs Live Preview */}
       <div className="flex lg:hidden grid-cols-2 gap-1 p-1 mb-6 rounded-lg bg-raised border border-line">
         <button
           type="button"
           onClick={() => setMobileView('editor')}
-          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded cursor-pointer ${
             mobileView === 'editor' ? 'bg-overlay text-ink font-bold' : 'text-faint'
           }`}
         >
@@ -301,7 +309,7 @@ export default function CalculatorBuilder({
         <button
           type="button"
           onClick={() => setMobileView('preview')}
-          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded cursor-pointer ${
             mobileView === 'preview' ? 'bg-overlay text-ink font-bold' : 'text-faint'
           }`}
         >
@@ -309,11 +317,8 @@ export default function CalculatorBuilder({
         </button>
       </div>
 
-      {/* Layout Split Screen */}
       <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* Colonna SX: Configurazione */}
         <div className={`lg:col-span-6 space-y-6 ${mobileView === 'preview' ? 'hidden lg:block' : ''}`}>
-          {/* Navigatore Tabs interno */}
           <div className="flex border-b border-line gap-2 overflow-x-auto pb-px font-mono text-xs uppercase tracking-wider">
             <button
               type="button"
@@ -361,7 +366,6 @@ export default function CalculatorBuilder({
             </button>
           </div>
 
-          {/* TAB 1: INPUTS */}
           {activeTab === 'inputs' && (
             <div className="space-y-4">
               {inputs.map((inp, idx) => (
@@ -495,14 +499,13 @@ export default function CalculatorBuilder({
               <button
                 type="button"
                 onClick={handleAddInput}
-                className="btn btn-ghost w-full !py-3 text-xs border-dashed"
+                className="btn btn-ghost w-full !py-3 text-xs border-dashed cursor-pointer"
               >
                 + Aggiungi Parametro Input
               </button>
             </div>
           )}
 
-          {/* TAB 2: OUTPUTS & FORMULE */}
           {activeTab === 'outputs' && (
             <div className="space-y-4">
               <div className="p-3 rounded-lg bg-surface border border-line text-xs text-muted leading-relaxed">
@@ -629,14 +632,13 @@ export default function CalculatorBuilder({
               <button
                 type="button"
                 onClick={handleAddOutput}
-                className="btn btn-ghost w-full !py-3 text-xs border-dashed"
+                className="btn btn-ghost w-full !py-3 text-xs border-dashed cursor-pointer"
               >
                 + Aggiungi Voce Risultato
               </button>
             </div>
           )}
 
-          {/* TAB 3: LEAD GATE */}
           {activeTab === 'gate' && (
             <div className="panel p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-line">
@@ -730,7 +732,6 @@ export default function CalculatorBuilder({
             </div>
           )}
 
-          {/* TAB 4: STILE & STATO */}
           {activeTab === 'style' && (
             <div className="panel p-5 space-y-6">
               <div>
@@ -767,7 +768,7 @@ export default function CalculatorBuilder({
                 <button
                   type="button"
                   onClick={() => setIsPublished(!isPublished)}
-                  className={`btn btn-sm ${isPublished ? 'btn-soft' : 'btn-ghost'}`}
+                  className={`btn btn-sm ${isPublished ? 'btn-soft' : 'btn-ghost'} cursor-pointer`}
                 >
                   {isPublished ? 'Online' : 'In Pausa'}
                 </button>
@@ -776,7 +777,6 @@ export default function CalculatorBuilder({
           )}
         </div>
 
-        {/* Colonna DX: Anteprima Live sticky */}
         <div className={`lg:col-span-6 sticky top-24 ${mobileView === 'editor' ? 'hidden lg:block' : ''}`}>
           <div className="flex items-center justify-between pb-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
@@ -802,10 +802,9 @@ export default function CalculatorBuilder({
         </div>
       </div>
 
-      {/* Modal Snippet Embed */}
       {showEmbedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-md">
-          <div className="panel p-6 max-w-lg w-full space-y-4 shadow-2xl border-line-strong">
+          <div className="panel p-6 max-w-xl w-full space-y-4 shadow-2xl border-line-strong">
             <div className="flex items-center justify-between pb-2 border-b border-line">
               <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
                 Incorporamento Calcolatore
@@ -820,11 +819,10 @@ export default function CalculatorBuilder({
             </div>
 
             <p className="text-xs text-muted leading-relaxed">
-              Copia questo codice HTML e incollalo in qualsiasi CMS (WordPress, Webflow, Shopify, Framer) o
-              codice sorgente:
+              Copia questo codice HTML completo di script di auto-ridimensionamento. Incollalo in qualsiasi CMS (WordPress, Webflow, Framer, Shopify) o sorgente personalizzato:
             </p>
 
-            <pre className="code-block p-4 text-[11px] text-accent-hi overflow-x-auto selection:bg-accent/40">
+            <pre className="code-block p-4 text-[11px] text-accent-hi overflow-x-auto selection:bg-accent/40 font-mono">
               {embedCode}
             </pre>
 
@@ -832,16 +830,16 @@ export default function CalculatorBuilder({
               <button
                 type="button"
                 onClick={() => setShowEmbedModal(false)}
-                className="btn btn-ghost btn-sm"
+                className="btn btn-ghost btn-sm cursor-pointer"
               >
                 Chiudi
               </button>
               <button
                 type="button"
                 onClick={copyEmbed}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm cursor-pointer"
               >
-                {copiedSnippet ? '✓ Copiato!' : 'Copia Snippet'}
+                {copiedSnippet ? '✓ Copiato!' : 'Copia Snippet Completo'}
               </button>
             </div>
           </div>
