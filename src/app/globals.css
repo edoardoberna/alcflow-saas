@@ -1,26 +1,82 @@
 @import "tailwindcss";
 
+/* 1. Definizione Token Colori nel Theme Engine */
+@theme {
+  --color-obsidian-void: #06080d;
+  --color-obsidian-panel: #0b0f17;
+  --color-obsidian-surface: #101623;
+  --color-obsidian-elevated: #161e2e;
+  
+  --color-hairline: rgba(255, 255, 255, 0.08);
+  --color-hairline-bright: rgba(255, 255, 255, 0.16);
+
+  --color-cyber-cyan: #00f0ff;
+  --color-signal-emerald: #00f59b;
+  --color-telemetry-amber: #ffb800;
+  --color-telemetry-rose: #ff3366;
+}
+
+/* 2. Regole di Base per lo sfondo e la tipografia */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #06080d;
+  color: #f1f5f9;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* 3. Griglia Tecnica Sottile (Sfondo Matrix / Cyber) */
+.bg-tech-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* 4. Bagliori Radiali Olografici */
+.bg-radial-glow {
+  background: radial-gradient(circle at 50% -20%, rgba(0, 240, 255, 0.07) 0%, transparent 70%);
+}
+
+.bg-radial-emerald {
+  background: radial-gradient(circle at 50% 120%, rgba(0, 245, 155, 0.05) 0%, transparent 60%);
+}
+
+/* 5. Card e Superfici da Terminale */
+.terminal-card {
+  background-color: #0b0f17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.terminal-card:hover {
+  border-color: rgba(0, 240, 255, 0.28);
+  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.8), 0 0 20px -2px rgba(0, 240, 255, 0.12);
+}
+
+/* 6. Allineamento Cifre Numeriche (Tabular) */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* 7. Scrollbar personalizzata stile terminale */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #06080d;
+}
+::-webkit-scrollbar-thumb {
+  background: #161e2e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #25334a;
 }
