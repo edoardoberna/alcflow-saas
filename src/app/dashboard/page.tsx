@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import UserAvatar from '@/components/UserAvatar';
 import { supabase } from '@/lib/supabase';
 
 interface CalculatorItem {
@@ -184,23 +185,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 p-6 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Header Superiore */}
+        {/* Header Superiore con UserAvatar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-xs font-semibold text-slate-500">{currentUser?.email}</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                  userPlan === 'pro'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-200 text-slate-700'
-                }`}
-              >
-                Piano {userPlan}
-              </span>
-            </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard Contatti & Lead</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Monitora conversioni, calcoli e contatti in tempo reale</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -217,12 +206,14 @@ export default function DashboardPage() {
             >
               Esporta in CSV
             </button>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-2.5 text-xs text-slate-400 hover:text-red-600 transition cursor-pointer font-medium"
-            >
-              Esci
-            </button>
+            <div className="pl-2 border-l border-slate-200">
+              <UserAvatar
+                email={currentUser?.email}
+                plan={userPlan}
+                onLogout={handleLogout}
+                onUpgradeClick={() => setShowUpgradeModal(true)}
+              />
+            </div>
           </div>
         </div>
 
@@ -464,7 +455,7 @@ export default function DashboardPage() {
 
               <button
                 onClick={() => {
-                  alert('Integrazione Stripe Checkout pronta per essere collegata con le tue chiavi API!');
+                  alert('Integrazione Stripe Checkout pronta per essere collegata!');
                 }}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg transition cursor-pointer"
               >

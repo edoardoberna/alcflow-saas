@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CalculatorPreview from '@/components/CalculatorPreview';
+import UserAvatar from '@/components/UserAvatar';
 import { CalculatorInput, CalculatorOutput } from '@/lib/calculator-engine';
 import { supabase } from '@/lib/supabase';
 
@@ -76,7 +77,7 @@ export default function CalculatorBuilder() {
       }
       setCurrentUser(user);
 
-      // Carica piano e conteggio calcolatori
+      // Lettura piano utente
       const { data: profile } = await supabase
         .from('profiles')
         .select('plan')
@@ -87,6 +88,7 @@ export default function CalculatorBuilder() {
         setUserPlan(profile.plan as 'free' | 'pro');
       }
 
+      // Conteggio calcolatori creati
       const { count } = await supabase
         .from('calculators')
         .select('id', { count: 'exact', head: true })
@@ -146,7 +148,7 @@ export default function CalculatorBuilder() {
       return;
     }
 
-    // Paywall Check: blocco per utenti Free che tentano di creare un 2° calcolatore
+    // Paywall Check: blocco per account Free oltre 1 calcolatore
     if (!calculatorId && userPlan === 'free' && existingCalculatorsCount >= 1) {
       setShowUpgradeModal(true);
       return;
@@ -386,42 +388,29 @@ export default function CalculatorBuilder() {
     <div className="grid grid-cols-1 lg:grid-cols-12 min-h-screen bg-slate-50 text-slate-900">
       <div className="lg:col-span-5 p-6 border-r border-slate-200 bg-white overflow-y-auto max-h-screen space-y-6">
         
-        {/* Barra Utente & Piano */}
-        <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+        {/* Barra Utente & Avatar Premium */}
+        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+          <UserAvatar
+            email={currentUser?.email}
+            plan={userPlan}
+            onLogout={handleLogout}
+            onUpgradeClick={() => setShowUpgradeModal(true)}
+          />
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span className="text-[11px] font-medium text-slate-600 truncate max-w-[150px]">
-              {currentUser?.email}
-            </span>
-            <span
-              className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                userPlan === 'pro' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {userPlan}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
             {userPlan === 'free' && (
               <button
                 onClick={() => setShowUpgradeModal(true)}
-                className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer"
+                className="hidden sm:inline-flex text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200"
               >
                 ★ Upgrade Pro
               </button>
             )}
             <Link
               href="/dashboard"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1"
             >
               Dashboard ↗
             </Link>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-slate-400 hover:text-red-600 cursor-pointer transition"
-            >
-              Esci
-            </button>
           </div>
         </div>
 
@@ -922,7 +911,7 @@ export default function CalculatorBuilder() {
 
               <button
                 onClick={() => {
-                  alert('Integrazione Stripe Checkout pronta per essere collegata con le tue chiavi API!');
+                  alert('Integrazione Stripe Checkout pronta per essere collegata!');
                 }}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg transition cursor-pointer"
               >
