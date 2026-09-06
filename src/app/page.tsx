@@ -101,7 +101,6 @@ function Mark({ size = 38 }: { size?: number }) {
         </linearGradient>
       </defs>
 
-      {/* Squircle di sfondo */}
       <rect width="512" height="512" rx="120" fill="#080C14" />
       <rect
         width="496"
@@ -114,7 +113,6 @@ function Mark({ size = 38 }: { size?: number }) {
         strokeWidth="10"
       />
 
-      {/* Corpo della Sigma in gradiente */}
       <path
         d="M 380 144 H 156 L 262 256 L 156 368 H 336"
         fill="none"
@@ -124,7 +122,6 @@ function Mark({ size = 38 }: { size?: number }) {
         strokeLinejoin="round"
       />
 
-      {/* Freccia cinetica verde menta */}
       <path
         d="M 285 316 L 378 368 L 285 420"
         fill="none"
@@ -134,7 +131,6 @@ function Mark({ size = 38 }: { size?: number }) {
         strokeLinejoin="round"
       />
 
-      {/* Nodo di calcolo centrale luminescente */}
       <circle cx="262" cy="256" r="26" fill="#FFFFFF" />
     </svg>
   );
@@ -597,7 +593,7 @@ const SWATCHES = [
 ];
 
 /* ==========================================================================
-   HEADER — Centrato, ad alto contrasto e con nuovo logo Sigma-Flow
+   HEADER — Pulito, centrato e con il nuovo logo Sigma-Flow
    ========================================================================== */
 
 function Header() {
@@ -619,7 +615,7 @@ function Header() {
             </span>
           </Link>
 
-          {/* Menu Desktop: Matematicamente Centrato, Grande e Luminoso */}
+          {/* Menu Desktop Centrato */}
           <nav
             className="hidden md:flex items-center gap-9 lg:gap-11 absolute left-1/2 -translate-x-1/2 z-20"
             aria-label="Navigazione principale"
@@ -636,11 +632,7 @@ function Header() {
           </nav>
 
           {/* Azioni DX */}
-          <div className="hidden md:flex items-center gap-4 z-20">
-            <span className="hidden lg:flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300 mr-1">
-              <span className="dot-live" />
-              OPERATIONAL
-            </span>
+          <div className="hidden md:flex items-center gap-3.5 z-20">
             <Link
               href="/login"
               className="font-mono text-[13px] font-semibold uppercase tracking-wider text-slate-200 hover:text-white px-4 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transition-colors"
@@ -1226,8 +1218,7 @@ function Footer() {
               webhook nativi, deploy in un rigo.
             </p>
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">
-              <span className="dot-live" />
-              All systems operational
+              Engine v2.6 · Postgres · RLS Active
             </div>
           </div>
 
