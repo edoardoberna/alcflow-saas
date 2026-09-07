@@ -1,24 +1,33 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasAuth = request.cookies.has('calcflow_auth');
 
-  // Solo la dashboard e i suoi sotto-percorsi sono protetti
-  const isProtectedRoute = pathname.startsWith('/dashboard');
+  // 1. Le rotte di incorporamento /embed DEVONO essere sempre pubbliche e intoccabili
+  if (pathname.startsWith('/embed')) {
+    return NextResponse.next();
+  }
 
-  // 1. Se tenti di entrare nella dashboard senza essere autenticato -> vai a /login
-  if (isProtectedRoute && !hasAuth) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+  // 2. Protezione delle rotte riservate (dashboard e builder)
+  if (pathname.startsWith('/dashboard')) {
+    if (!hasAuth) {
+      const loginUrl = new URL('/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 3. Se l'utente autenticato visita /login, reindirizza alla dashboard
+  if (pathname === '/login' && hasAuth) {
+    const dashUrl = new URL('/dashboard', request.url);
+    return NextResponse.redirect(dashUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/dashboard/:path*'
-  ]
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
