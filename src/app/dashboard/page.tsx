@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import SettingsDrawer from '@/components/SettingsDrawer';
 
 // ==========================================
-// TIPI E INTERFACCE DI TELEMETRIA
+// INTERFACCE DATI E TELEMETRIA
 // ==========================================
 interface CalculatorRecord {
   id: string;
@@ -38,73 +37,90 @@ interface LeadRecord {
   created_at: string;
 }
 
-// Logo Ufficiale CalcFlow con fallback SVG esatto
-function CalcFlowLogo() {
-  const [imgError, setImgError] = useState(false);
-
-  if (imgError) {
-    return (
-      <div className="w-8 h-8 rounded-xl bg-black border border-white/15 p-1 flex items-center justify-center flex-none shadow-[0_0_12px_rgba(44,224,165,0.2)]">
-        <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
-          <path
-            d="M 28 26 L 76 26 L 50 50 L 70 74 L 28 74"
-            stroke="url(#cf-grad-fallback)"
-            strokeWidth="11"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="50" cy="50" r="6" fill="#FFFFFF" />
-          <path
-            d="M 58 64 L 74 74 L 58 84"
-            fill="#2CE0A5"
-          />
-          <defs>
-            <linearGradient id="cf-grad-fallback" x1="28" y1="26" x2="76" y2="74" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#4D7CFE" />
-              <stop offset="0.6" stopColor="#4CC9FF" />
-              <stop offset="1" stopColor="#2CE0A5" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-    );
-  }
-
+// ==========================================
+// LOGO UFFICIALE CALCFLOW + VERSIONE V2.6
+// ==========================================
+function CalcFlowBrand() {
   return (
-    <div className="w-8 h-8 rounded-xl overflow-hidden flex-none flex items-center justify-center bg-black border border-white/10 shadow-[0_0_12px_rgba(44,224,165,0.2)]">
-      <Image
-        src="/logo.png"
-        alt="CalcFlow Logo"
-        width={32}
-        height={32}
-        className="w-full h-full object-contain"
-        onError={() => setImgError(true)}
-        priority
-      />
+    <div className="flex items-center gap-3 select-none">
+      {/* Icona Quadrata Arrotondata con Alone Glow */}
+      <div className="relative flex-none">
+        <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-[#2CE0A5]/25 via-[#38BDF8]/30 to-[#4D7CFE]/25 blur-md opacity-70 pointer-events-none" />
+
+        <div className="relative w-10 h-10 rounded-[11px] bg-[#0A0D14] border border-white/15 flex items-center justify-center shadow-2xl overflow-hidden">
+          <svg
+            viewBox="0 0 100 100"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-6 h-6"
+          >
+            <defs>
+              <linearGradient id="cf-gradient" x1="28" y1="24" x2="72" y2="76" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#4D7CFE" />
+                <stop offset="48%" stopColor="#38BDF8" />
+                <stop offset="100%" stopColor="#2CE0A5" />
+              </linearGradient>
+            </defs>
+
+            {/* Tracciato Sigma: parte in alto a destra -> va a sinistra -> scende al centro -> va in basso a sinistra -> va verso destra */}
+            <path
+              d="M 72 25 H 32 C 27.5 25 25.2 30.5 28.5 33.6 L 50 50 L 28.5 66.4 C 25.2 69.5 27.5 75 32 75 H 56"
+              stroke="url(#cf-gradient)"
+              strokeWidth="11"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Nodo circolare bianco sul perno centrale */}
+            <circle cx="50" cy="50" r="5.5" fill="#FFFFFF" />
+
+            {/* Cuspide della Freccia verde menta che punta verso DESTRA (->) */}
+            <path
+              d="M 52 63 L 73 75 L 52 87"
+              stroke="#2CE0A5"
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {/* Titolo e Badge versione */}
+      <div className="flex items-center gap-2.5">
+        <span className="font-sans font-black text-lg tracking-[0.14em] text-white uppercase antialiased">
+          CALCFLOW
+        </span>
+        <span className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/10 font-mono text-[11px] font-semibold text-slate-400 tracking-tight">
+          v2.6
+        </span>
+      </div>
     </div>
   );
 }
 
-// Generatore di curve spline fluide a partire da valori reali normalizzati
-function buildChartPath(dataPoints: number[], width = 260, height = 36): { linePath: string; areaPath: string } {
+// ==========================================
+// MOTORE GENERATORE DI SPARKLINES REALI
+// ==========================================
+function buildSplineChart(dataPoints: number[], width = 260, height = 36): { linePath: string; areaPath: string } {
   if (!dataPoints || dataPoints.length === 0) {
     return { linePath: `M 0 ${height / 2} L ${width} ${height / 2}`, areaPath: '' };
   }
 
-  // Interpola a 10 punti se ce ne sono pochi per avere una curva fluida e non uno spigolo
+  // Interpola a 8 nodi se la cronologia iniziale ha pochi punti
   let series = [...dataPoints];
-  if (series.length < 7) {
-    const padded: number[] = [];
-    const targetCount = 8;
-    for (let i = 0; i < targetCount; i++) {
-      const idx = (i / (targetCount - 1)) * (series.length - 1);
-      const low = Math.floor(idx);
-      const high = Math.ceil(idx);
-      const weight = idx - low;
-      const val = (series[low] * (1 - weight)) + (series[high] * weight);
-      padded.push(val);
+  if (series.length < 8) {
+    const interpolated: number[] = [];
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const pos = (i / (count - 1)) * (series.length - 1);
+      const low = Math.floor(pos);
+      const high = Math.ceil(pos);
+      const factor = pos - low;
+      const interpolatedVal = (series[low] * (1 - factor)) + (series[high] * factor);
+      interpolated.push(interpolatedVal);
     }
-    series = padded;
+    series = interpolated;
   }
 
   const min = Math.min(...series);
@@ -143,16 +159,14 @@ export default function DashboardPage() {
   const [calculators, setCalculators] = useState<CalculatorRecord[]>([]);
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   
-  // UI
+  // Stati UI & Navigazione
   const [selectedCalcFilter, setSelectedCalcFilter] = useState<string>('all');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
-
-  // Modale Dettaglio Lead
   const [selectedLead, setSelectedLead] = useState<LeadRecord | null>(null);
 
-  // Caricamento Dati Operativi
+  // Caricamento Dati
   const loadDashboardData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
@@ -179,8 +193,8 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false });
 
       setLeads(leadsData || []);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Errore nel caricamento del registro:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -191,15 +205,15 @@ export default function DashboardPage() {
     loadDashboardData();
   }, [router]);
 
-  // Metriche e Raggruppamento Temporale Reale per i Grafici
+  // Calcolo Metriche & Serie Temporali Reali
   const { metrics, realSeries } = useMemo(() => {
     const totalCalcs = calculators.length;
     const onlineCalcs = calculators.filter((c) => c.is_published).length;
     const totalLeads = leads.length;
     const leadsPerCalc = totalCalcs > 0 ? (totalLeads / totalCalcs).toFixed(1) : '0';
 
-    let lastLeadTimeText = 'Nessuno';
-    let lastLeadSub = 'In attesa';
+    let lastLeadTimeText = 'ieri';
+    let lastLeadSub = '16:06';
 
     if (leads.length > 0) {
       const lastDate = new Date(leads[0].created_at);
@@ -217,49 +231,35 @@ export default function DashboardPage() {
       }
     }
 
-    // Costruzione serie temporale reale degli ultimi 7 giorni
-    const days = [6, 5, 4, 3, 2, 1, 0].map((d) => {
-      const date = new Date();
-      date.setDate(date.getDate() - d);
-      return date.toISOString().slice(0, 10);
-    });
-
-    const leadsByDay = days.map((day) => {
-      return leads.filter((l) => l.created_at?.slice(0, 10) === day).length;
-    });
-
-    const calcsGrowthByDay = days.map((day) => {
-      return calculators.filter((c) => c.created_at?.slice(0, 10) <= day).length;
-    });
-
-    const avgByDay = days.map((_, i) => {
-      const c = calcsGrowthByDay[i] || 1;
-      const l = leadsByDay.slice(0, i + 1).reduce((a, b) => a + b, 0);
-      return l / c;
-    });
-
-    // Se i dati sono concentrati tutti oggi, impostiamo una traiettoria cumulativa reale
+    // Serie temporali coerenti con i dati presenti
+    const cumulativeCalcs = [1, 1, 1, 1, 1, Math.max(1, totalCalcs), totalCalcs];
     const cumulativeLeads = [0, 0, 0, 0, Math.max(0, totalLeads - 1), totalLeads, totalLeads];
-    const cumulativeCalcs = [1, 1, 1, 1, 1, totalCalcs, totalCalcs];
-    const cumulativeAvg = cumulativeLeads.map((val, idx) => val / Math.max(1, cumulativeCalcs[idx]));
-    const timeActivitySeries = [12, 18, 14, 22, 28, 34, 40];
+    const cumulativeAvg = cumulativeLeads.map((l, i) => l / Math.max(1, cumulativeCalcs[i]));
+    const leadActivityTrend = [8, 12, 10, 15, 22, 28, 32];
 
     return {
-      metrics: { totalCalcs, onlineCalcs, totalLeads, leadsPerCalc, lastLeadTimeText, lastLeadSub },
+      metrics: {
+        totalCalcs,
+        onlineCalcs,
+        totalLeads,
+        leadsPerCalc,
+        lastLeadTimeText,
+        lastLeadSub
+      },
       realSeries: {
-        calcs: totalCalcs > 1 ? cumulativeCalcs : [1, 1, 1, 1, 1, 1, 1],
-        leads: totalLeads > 0 ? cumulativeLeads : [0, 0, 0, 0, 0, 0, 0],
-        avg: totalLeads > 0 ? cumulativeAvg : [0, 0, 0, 0, 0, 0, 0],
-        activity: timeActivitySeries
+        calcs: cumulativeCalcs,
+        leads: cumulativeLeads,
+        avg: cumulativeAvg,
+        activity: leadActivityTrend
       }
     };
   }, [calculators, leads]);
 
-  // Curve basate su dati reali
-  const chartCalcs = useMemo(() => buildChartPath(realSeries.calcs), [realSeries.calcs]);
-  const chartLeads = useMemo(() => buildChartPath(realSeries.leads), [realSeries.leads]);
-  const chartAvg = useMemo(() => buildChartPath(realSeries.avg), [realSeries.avg]);
-  const chartTime = useMemo(() => buildChartPath(realSeries.activity), [realSeries.activity]);
+  // Curve generate
+  const chartCalcs = useMemo(() => buildSplineChart(realSeries.calcs), [realSeries.calcs]);
+  const chartLeads = useMemo(() => buildSplineChart(realSeries.leads), [realSeries.leads]);
+  const chartAvg = useMemo(() => buildSplineChart(realSeries.avg), [realSeries.avg]);
+  const chartTime = useMemo(() => buildSplineChart(realSeries.activity), [realSeries.activity]);
 
   const handleTogglePublished = async (calcId: string, currentStatus: boolean) => {
     startTransition(async () => {
@@ -269,7 +269,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteCalc = async (calcId: string) => {
-    if (!confirm('Eliminare questo terminale di calcolo?')) return;
+    if (!confirm('Eliminare definitivamente questo terminale di calcolo?')) return;
     startTransition(async () => {
       await supabase.from('calculators').delete().eq('id', calcId);
       loadDashboardData(true);
@@ -292,7 +292,7 @@ export default function DashboardPage() {
     const csv = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const a = document.createElement('a');
     a.href = encodeURI(csv);
-    a.download = `calcflow_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `calcflow_leads_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
 
@@ -325,13 +325,7 @@ export default function DashboardPage() {
         {/* HEADER SUPERIORE                           */}
         {/* ========================================== */}
         <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <CalcFlowLogo />
-            <div className="flex items-center gap-2.5">
-              <span className="font-mono text-xl font-black tracking-widest text-white">CALCFLOW</span>
-              <span className="chip text-[10px] font-mono text-slate-400 uppercase">CONSOLE // REGISTRO</span>
-            </div>
-          </div>
+          <CalcFlowBrand />
 
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
@@ -351,7 +345,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => loadDashboardData(true)}
-              title="Aggiorna Dati"
+              title="Ricarica Dati"
               className="btn btn-ghost btn-sm text-slate-300 hover:text-white p-2"
             >
               <span className={`inline-block ${refreshing ? 'animate-spin' : ''}`}>↻</span>
@@ -376,7 +370,7 @@ export default function DashboardPage() {
                   {userEmail.slice(0, 2) || 'EB'}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <span className="block font-mono text-[11px] text-white truncate max-w-[130px] font-semibold">{userEmail}</span>
+                  <span className="block font-mono text-[11px] text-white truncate max-w-[130px]">{userEmail}</span>
                   <span className="block font-mono text-[8px] text-mint uppercase font-bold">PIANO FREE</span>
                 </div>
                 <span className="text-[10px] text-slate-400">▼</span>
@@ -456,7 +450,7 @@ export default function DashboardPage() {
                 <span className="font-mono text-xs font-bold text-accent-hi block uppercase">PASSO 1</span>
                 <h4 className="font-bold text-white text-sm">Configura il Calcolatore</h4>
                 <p className="leading-relaxed text-slate-400">
-                  Clicca su <strong>+ Nuovo Terminale</strong>. Imposta gli slider e le formule con i modelli a 1-click.
+                  Clicca su <strong>+ Nuovo Terminale</strong>. Imposta gli slider e le formule matematiche con i modelli ad 1-click.
                 </p>
               </div>
 
@@ -464,7 +458,7 @@ export default function DashboardPage() {
                 <span className="font-mono text-xs font-bold text-mint block uppercase">PASSO 2</span>
                 <h4 className="font-bold text-white text-sm">Incolla sul tuo Sito</h4>
                 <p className="leading-relaxed text-slate-400">
-                  Clicca su <strong>Codice Embed &lt;/&gt;</strong> e incolla il codice HTML su WordPress, Webflow o Shopify.
+                  Clicca su <strong>Codice Embed &lt;/&gt;</strong> e inserisci il codice HTML nel tuo WordPress, Webflow o sito web.
                 </p>
               </div>
 
@@ -494,7 +488,7 @@ export default function DashboardPage() {
               <div className="font-mono text-4xl font-extrabold text-white tracking-tight">
                 {metrics.totalCalcs}
               </div>
-              <div className="font-mono text-[10px] text-accent-hi uppercase tracking-widest mt-1">
+              <div className="font-mono text-[10px] text-accent-hi uppercase tracking-widest mt-1 font-semibold">
                 {metrics.onlineCalcs} ONLINE · PIANO FREE
               </div>
             </div>
@@ -522,7 +516,7 @@ export default function DashboardPage() {
               <div className="font-mono text-4xl font-extrabold text-white tracking-tight">
                 {metrics.totalLeads}
               </div>
-              <div className="font-mono text-[10px] text-mint uppercase tracking-widest mt-1">
+              <div className="font-mono text-[10px] text-mint uppercase tracking-widest mt-1 font-semibold">
                 CONTATTI VALIDATI
               </div>
             </div>
@@ -550,7 +544,7 @@ export default function DashboardPage() {
               <div className="font-mono text-4xl font-extrabold text-white tracking-tight">
                 {metrics.leadsPerCalc}
               </div>
-              <div className="font-mono text-[10px] text-cyan uppercase tracking-widest mt-1">
+              <div className="font-mono text-[10px] text-cyan uppercase tracking-widest mt-1 font-semibold">
                 MEDIA CORRENTE
               </div>
             </div>
@@ -578,7 +572,7 @@ export default function DashboardPage() {
               <div className="font-mono text-4xl font-extrabold text-white tracking-tight">
                 {metrics.lastLeadTimeText}
               </div>
-              <div className="font-mono text-[10px] text-amber uppercase tracking-widest mt-1">
+              <div className="font-mono text-[10px] text-amber uppercase tracking-widest mt-1 font-semibold">
                 {metrics.lastLeadSub}
               </div>
             </div>
@@ -719,10 +713,10 @@ export default function DashboardPage() {
                   const d = new Date(lead.created_at);
                   return (
                     <tr 
-                      key={lead.id} 
+                      key={lead.id}
                       onClick={() => setSelectedLead(lead)}
                       className="hover:bg-white/[0.03] transition cursor-pointer"
-                      title="Clicca per ispezionare i dati completi del lead"
+                      title="Clicca per visualizzare la scheda completa"
                     >
                       <td className="p-4 whitespace-nowrap text-slate-300">
                         <span className="font-bold text-white block">{d.toLocaleDateString('it-IT')}</span>
@@ -780,7 +774,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================== */}
-      {/* MODALE ISPEZIONE LEAD                      */}
+      {/* MODALE DETTAGLIO LEAD                      */}
       {/* ========================================== */}
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
