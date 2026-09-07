@@ -357,7 +357,7 @@ export default function DashboardPage() {
               href="/dashboard/builder"
               className="btn btn-primary btn-sm !px-5 font-bold text-xs shadow-[0_0_20px_rgba(77,124,254,0.4)]"
             >
-              + NUOVO TERMINALE
+              + NUOVO CALCOLATORE
             </Link>
 
             <button
@@ -430,10 +430,10 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
               <span className="w-2 h-2 rounded-full bg-mint animate-pulse" />
-              <span>AGGIORNATO AL LUNEDÌ 7 SETTEMBRE 2026</span>
+              <span>PANORAMICA DEL TUO ACCOUNT</span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-white mt-1">
-              Registro operativo
+              Dashboard
             </h1>
           </div>
           <div className="font-mono text-xs text-slate-400 flex items-center gap-2">
@@ -451,7 +451,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="text-xl">🚀</span>
-                <h3 className="font-bold text-white text-base">Come iniziare con CalcFlow in 3 passaggi:</h3>
+                <h3 className="font-bold text-white text-base">Inizia con CalcFlow in 3 passaggi</h3>
               </div>
               <button
                 type="button"
@@ -467,7 +467,7 @@ export default function DashboardPage() {
                 <span className="font-mono text-xs font-bold text-accent-hi block uppercase">PASSO 1</span>
                 <h4 className="font-bold text-white text-sm">Configura il Calcolatore</h4>
                 <p className="leading-relaxed text-slate-400">
-                  Clicca su <strong>+ Nuovo Terminale</strong>. Imposta gli slider e le formule matematiche con i modelli ad 1-click.
+                  Crea un calcolatore, aggiungi le domande e configura il risultato con i modelli pronti.
                 </p>
               </div>
 
@@ -475,7 +475,7 @@ export default function DashboardPage() {
                 <span className="font-mono text-xs font-bold text-mint block uppercase">PASSO 2</span>
                 <h4 className="font-bold text-white text-sm">Incolla sul tuo Sito</h4>
                 <p className="leading-relaxed text-slate-400">
-                  Clicca su <strong>Codice Embed &lt;/&gt;</strong> e inserisci il codice HTML nel tuo WordPress, Webflow o sito web.
+                  Copia il codice da incorporare e inseriscilo nel tuo WordPress, Webflow o sito web.
                 </p>
               </div>
 

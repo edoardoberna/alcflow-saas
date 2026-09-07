@@ -129,7 +129,7 @@ function BuilderContent() {
     <div>
       <div className="mb-6">
         <Link href="/dashboard" className="text-xs font-mono text-faint hover:text-ink transition">
-          ← Torna al Registro Operativo
+          ← Torna alla dashboard
         </Link>
       </div>
 

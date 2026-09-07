@@ -283,7 +283,7 @@ export default function CalculatorBuilder({
           href="/dashboard"
           className="inline-flex items-center gap-2 text-xs font-mono font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition"
         >
-          <span>←</span> Torna alla Dashboard
+          <span>←</span> Torna alla dashboard
         </Link>
         <div className="flex items-center gap-3">
           <button
@@ -291,7 +291,7 @@ export default function CalculatorBuilder({
             onClick={() => setShowHelpBanner(!showHelpBanner)}
             className="text-xs font-mono text-accent-hi hover:underline cursor-pointer"
           >
-            {showHelpBanner ? 'Nascondi Guida' : 'Mostra Guida Rapida'}
+            {showHelpBanner ? 'Nascondi istruzioni' : 'Mostra istruzioni'}
           </button>
         </div>
       </div>
@@ -301,7 +301,7 @@ export default function CalculatorBuilder({
         <div className="mb-6 p-4 rounded-xl bg-accent/[0.07] border border-accent/30 text-xs text-slate-200">
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex items-center gap-2 font-bold text-white text-sm">
-              <span>💡</span> Come funziona la creazione del calcolatore:
+              <span>💡</span> Crea il tuo calcolatore in tre passaggi
             </div>
             <button
               type="button"
@@ -313,16 +313,16 @@ export default function CalculatorBuilder({
           </div>
           <div className="grid sm:grid-cols-3 gap-3 pt-1 text-[11px] text-slate-300 leading-relaxed">
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-              <span className="font-bold text-accent-hi block mb-1">1. Imposta gli Input</span>
-              Scegli cosa fa muovere il visitatore (es. cursore per i metri quadri o le ore). A ciascuno assegna un nome breve in minuscolo (la &quot;variabile&quot;).
+              <span className="font-bold text-accent-hi block mb-1">1. Aggiungi le domande</span>
+              Scegli quali informazioni deve inserire il cliente, come metri quadri, ore o quantità.
             </div>
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-              <span className="font-bold text-accent-hi block mb-1">2. Scegli la Formula</span>
-              Puoi cliccare sui nostri template pronti oppure combinare le variabili cliccandoci sopra (es. <code className="text-mint font-mono">{primaryVar} * 100</code>).
+              <span className="font-bold text-accent-hi block mb-1">2. Configura il risultato</span>
+              Usa un modello pronto oppure componi la formula con le variabili disponibili (es. <code className="text-mint font-mono">{primaryVar} * 100</code>).
             </div>
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-              <span className="font-bold text-accent-hi block mb-1">3. Raccogli i Lead</span>
-              Con il Lead Gate attivo, prima di vedere il totale il visitatore inserisce la sua email. I contatti finiranno subito nella tua dashboard!
+              <span className="font-bold text-accent-hi block mb-1">3. Raccogli i contatti</span>
+              Attiva la richiesta email prima del risultato e ritrova ogni contatto nella dashboard.
             </div>
           </div>
         </div>
@@ -336,7 +336,7 @@ export default function CalculatorBuilder({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="text-xl sm:text-2xl font-bold text-white bg-transparent border-b border-white/20 hover:border-white focus:border-accent focus:outline-none transition py-1"
-            placeholder="Nome del Calcolatore..."
+            placeholder="Nome del calcolatore..."
           />
           <Tooltip
             content="Il titolo del tuo strumento. Sarà visibile ai clienti sia nel widget che nel tuo registro lead."
@@ -355,7 +355,7 @@ export default function CalculatorBuilder({
               onClick={() => setShowEmbedModal(true)}
               className="btn btn-ghost btn-sm text-slate-200 hover:text-white cursor-pointer"
             >
-              Codice Embed &lt;/&gt;
+              Codice da incorporare &lt;/&gt;
             </button>
           )}
 
@@ -365,7 +365,7 @@ export default function CalculatorBuilder({
             disabled={saving}
             className="btn btn-primary btn-sm !px-6 !py-2.5 font-bold shadow-[0_0_20px_rgba(77,124,254,0.4)] cursor-pointer"
           >
-            {saving ? 'Salvataggio…' : 'SALVA MODIFICHE'}
+            {saving ? 'Salvataggio…' : 'Salva calcolatore'}
           </button>
         </div>
       </div>
@@ -379,7 +379,7 @@ export default function CalculatorBuilder({
             mobileView === 'editor' ? 'bg-white/10 text-white font-bold' : 'text-slate-400'
           }`}
         >
-          Editor Configurazione
+          Configurazione
         </button>
         <button
           type="button"
@@ -399,10 +399,10 @@ export default function CalculatorBuilder({
           {/* Barra Navigazione Tabs */}
           <div className="flex border-b border-white/10 gap-3 pb-px font-mono text-xs uppercase tracking-wider">
             {[
-              { id: 'inputs', label: `1. Input (${inputs.length})` },
+              { id: 'inputs', label: `1. Domande (${inputs.length})` },
               { id: 'outputs', label: `2. Risultati (${outputs.length})` },
-              { id: 'gate', label: '3. Lead Gate' },
-              { id: 'style', label: '4. Stile & Stato' }
+              { id: 'gate', label: '3. Contatti' },
+              { id: 'style', label: '4. Aspetto' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -426,7 +426,7 @@ export default function CalculatorBuilder({
                 <div key={inp.id || idx} className="panel p-5 space-y-4 border border-white/10 bg-[#0C1019]">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-mono text-xs font-bold text-accent-hi uppercase tracking-wider">
-                      PARAMETRO #{idx + 1}
+                      DOMANDA #{idx + 1}
                     </span>
                     <button
                       type="button"
@@ -441,7 +441,7 @@ export default function CalculatorBuilder({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                        Etichetta Visibile
+                        Etichetta per il cliente
                         <Tooltip
                           content="Il testo che il cliente legge sopra la levetta o il campo numerico."
                           example="'Superficie dell'immobile' oppure 'Numero di utenti'"
@@ -457,7 +457,7 @@ export default function CalculatorBuilder({
                     </div>
                     <div>
                       <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                        Identificatore Variabile
+                        Nome tecnico
                         <Tooltip
                           content="La 'parola chiave' in minuscolo che userai dentro la formula matematica per fare i calcoli."
                           example="Se scrivi 'mq', nella formula scriverai 'mq * 50'"
@@ -482,8 +482,8 @@ export default function CalculatorBuilder({
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                        Tipologia
-                        <Tooltip content="Scegli se mostrare un cursore scorrevole (Slider) o una casella dove digitare il numero." />
+                        Tipo di campo
+                        <Tooltip content="Scegli se mostrare un cursore, un campo numerico o un menu di scelta." />
                       </label>
                       <select
                         value={inp.type}
@@ -580,7 +580,7 @@ export default function CalculatorBuilder({
                 onClick={handleAddInput}
                 className="btn btn-ghost w-full !py-3 font-mono text-xs border-dashed text-slate-300 hover:text-white cursor-pointer"
               >
-                + Aggiungi Parametro Input
+                + Aggiungi domanda
               </button>
             </div>
           )}
