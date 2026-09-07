@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   evaluateFormula,
   CalculatorInput,
   CalculatorOutput
 } from '@/lib/calculator-engine';
 import CalculatorPreview from '@/components/CalculatorPreview';
+import Tooltip from '@/components/Tooltip';
 
 export interface CalculatorData {
   id?: string;
@@ -46,6 +48,7 @@ export default function CalculatorBuilder({
   const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [showHelpBanner, setShowHelpBanner] = useState(true);
 
   // Stato Terminale
   const [title, setTitle] = useState(initialData?.title || 'Nuovo Terminale di Stima');
@@ -140,7 +143,6 @@ export default function CalculatorBuilder({
     return status;
   }, [inputs, outputs]);
 
-  // Gestione Input con parser numerico permissivo (non blocca se il campo è vuoto)
   const handleAddInput = () => {
     const nextIdx = inputs.length + 1;
     const nextId = `inp_${Date.now().toString().slice(-4)}`;
@@ -171,7 +173,6 @@ export default function CalculatorBuilder({
     setInputs((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Gestione Output
   const handleAddOutput = () => {
     const nextIdx = outputs.length + 1;
     const nextId = `out_${Date.now().toString().slice(-4)}`;
@@ -254,7 +255,58 @@ export default function CalculatorBuilder({
 
   return (
     <div className="w-full">
-      {/* Intestazione Barra Superiore */}
+      {/* Barra di Navigazione Rapida Superiore */}
+      <div className="flex items-center justify-between gap-4 pb-4 mb-4 border-b border-white/10">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-xs font-mono font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition"
+        >
+          <span>←</span> Torna alla Dashboard
+        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowHelpBanner(!showHelpBanner)}
+            className="text-xs font-mono text-accent-hi hover:underline cursor-pointer"
+          >
+            {showHelpBanner ? 'Nascondi Guida' : 'Mostra Guida Rapida'}
+          </button>
+        </div>
+      </div>
+
+      {/* Guida Rapida Visiva */}
+      {showHelpBanner && (
+        <div className="mb-6 p-4 rounded-xl bg-accent/[0.07] border border-accent/30 text-xs text-slate-200">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 font-bold text-white text-sm">
+              <span>💡</span> Come funziona la creazione del calcolatore:
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHelpBanner(false)}
+              className="text-slate-400 hover:text-white font-mono text-xs"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3 pt-1 text-[11px] text-slate-300 leading-relaxed">
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <span className="font-bold text-accent-hi block mb-1">1. Imposta gli Input</span>
+              Scegli cosa fa muovere il visitatore (es. cursore per i metri quadri o le ore). A ciascuno assegna un nome breve in minuscolo (la "variabile").
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <span className="font-bold text-accent-hi block mb-1">2. Scrivi la Formula</span>
+              Usa le variabili per calcolare il totale, come faresti su una normale calcolatrice: ad esempio <code className="text-mint font-mono">pagine * 100</code>.
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <span className="font-bold text-accent-hi block mb-1">3. Raccogli i Lead</span>
+              Con il Lead Gate attivo, prima di vedere il totale il visitatore inserisce la sua email. I contatti finiranno subito nella tua dashboard!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Titolo e Azioni Principali */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/10 mb-6">
         <div className="flex items-center gap-3">
           <input
@@ -263,6 +315,10 @@ export default function CalculatorBuilder({
             onChange={(e) => setTitle(e.target.value)}
             className="text-xl sm:text-2xl font-bold text-white bg-transparent border-b border-white/20 hover:border-white focus:border-accent focus:outline-none transition py-1"
             placeholder="Nome del Calcolatore..."
+          />
+          <Tooltip
+            content="Il titolo del tuo strumento. Sarà visibile ai clienti sia nel widget che nel tuo registro lead."
+            example="'Preventivatore Ristrutturazione Bagno' oppure 'Stima Pannelli Solari'"
           />
           <span className={`badge ${isPublished ? 'badge-mint' : 'badge-amber'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? 'bg-mint' : 'bg-amber'}`} />
@@ -275,7 +331,7 @@ export default function CalculatorBuilder({
             <button
               type="button"
               onClick={() => setShowEmbedModal(true)}
-              className="btn btn-ghost btn-sm text-slate-200 hover:text-white"
+              className="btn btn-ghost btn-sm text-slate-200 hover:text-white cursor-pointer"
             >
               Codice Embed &lt;/&gt;
             </button>
@@ -362,8 +418,12 @@ export default function CalculatorBuilder({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Etichetta Visibile
+                        <Tooltip
+                          content="Il testo che il cliente legge sopra la levetta o il campo numerico."
+                          example="'Superficie dell'immobile' oppure 'Numero di utenti'"
+                        />
                       </label>
                       <input
                         type="text"
@@ -374,8 +434,12 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Identificatore Variabile
+                        <Tooltip
+                          content="La 'parola chiave' in minuscolo che userai dentro la formula matematica per fare i calcoli."
+                          example="Se scrivi 'mq', nella formula scriverai 'mq * 50'"
+                        />
                       </label>
                       <input
                         type="text"
@@ -395,21 +459,23 @@ export default function CalculatorBuilder({
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Tipologia
+                        <Tooltip content="Scegli se mostrare un cursore scorrevole (Slider) o una casella dove digitare il numero." />
                       </label>
                       <select
                         value={inp.type}
                         onChange={(e) => handleUpdateInput(idx, 'type', e.target.value)}
                         className="field text-xs font-medium"
                       >
-                        <option value="slider">Slider</option>
+                        <option value="slider">Slider (Levetta)</option>
                         <option value="number">Campo Numerico</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Valore Iniziale
+                        <Tooltip content="Il valore già impostato quando il cliente apre la pagina per la prima volta." />
                       </label>
                       <input
                         type="number"
@@ -419,8 +485,9 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Passo (Step)
+                        <Tooltip content="Di quanto si sposta il numero ad ogni scatto dello slider." example="Se imposti 5, salirà a scatti di 5 in 5: 5, 10, 15, 20..." />
                       </label>
                       <input
                         type="number"
@@ -433,8 +500,9 @@ export default function CalculatorBuilder({
 
                   <div className="grid grid-cols-4 gap-3">
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Minimo
+                        <Tooltip content="Il valore minimo selezionabile." />
                       </label>
                       <input
                         type="number"
@@ -444,8 +512,9 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Massimo
+                        <Tooltip content="Il valore massimo raggiungibile dallo slider." />
                       </label>
                       <input
                         type="number"
@@ -455,8 +524,9 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Prefisso
+                        <Tooltip content="Simbolo mostrato prima del numero." example="'€' oppure 'h'" />
                       </label>
                       <input
                         type="text"
@@ -467,8 +537,9 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Suffisso
+                        <Tooltip content="Testo o unità di misura mostrata subito dopo il numero." example="'mq', 'giorni', 'persone'" />
                       </label>
                       <input
                         type="text"
@@ -495,11 +566,16 @@ export default function CalculatorBuilder({
           {/* TAB 2: RISULTATI (FORMULE) */}
           {activeTab === 'outputs' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#0C1019] border border-white/10 text-xs text-slate-300 leading-relaxed">
-                <span className="font-bold text-white">Variabili disponibili:</span>{' '}
-                <code className="text-cyan font-mono font-semibold">
-                  {inputs.map((i) => i.variable).filter(Boolean).join(', ') || 'nessuna'}
-                </code>
+              <div className="p-4 rounded-xl bg-[#0C1019] border border-white/10 text-xs text-slate-300 leading-relaxed flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-white">Variabili disponibili per i calcoli:</span>{' '}
+                  <code className="text-cyan font-mono font-semibold">
+                    {inputs.map((i) => i.variable).filter(Boolean).join(', ') || 'nessuna'}
+                  </code>
+                </div>
+                <Tooltip
+                  content="Queste sono le parole che puoi inserire nella formula. Il calcolatore le sostituirà istantaneamente con il numero scelto dall'utente."
+                />
               </div>
 
               {outputs.map((out, idx) => {
@@ -522,8 +598,9 @@ export default function CalculatorBuilder({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                           Nome Risultato
+                          <Tooltip content="L'etichetta del totale calcolato visibile all'utente." example="'Totale Preventivo', 'Risparmio Annuo'" />
                         </label>
                         <input
                           type="text"
@@ -534,8 +611,9 @@ export default function CalculatorBuilder({
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                           Identificatore Variabile
+                          <Tooltip content="Nome interno per salvare il risultato nel database o riutilizzarlo in altre formule." />
                         </label>
                         <input
                           type="text"
@@ -555,8 +633,12 @@ export default function CalculatorBuilder({
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+                        <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
                           Formula Matematica
+                          <Tooltip
+                            content="L'operazione matematica. Usa +, -, *, / e le parentesi. Puoi anche usare condizioni: es. (ore > 10 ? ore * 40 : ore * 50)"
+                            example="(pagine * 120) + (ore * 45)"
+                          />
                         </label>
                         {validation && (
                           <span className={`font-mono text-[11px] font-bold ${validation.isValid ? 'text-mint' : 'text-rose'}`}>
@@ -577,8 +659,9 @@ export default function CalculatorBuilder({
 
                     <div className="grid grid-cols-3 gap-3 items-center">
                       <div>
-                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                           Prefisso
+                          <Tooltip content="Simbolo davanti al totale finale." example="'€' o '$'" />
                         </label>
                         <input
                           type="text"
@@ -589,8 +672,9 @@ export default function CalculatorBuilder({
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                           Suffisso
+                          <Tooltip content="Dicitura dopo il totale finale." example="'/ mese' o 'una tantum'" />
                         </label>
                         <input
                           type="text"
@@ -609,6 +693,7 @@ export default function CalculatorBuilder({
                             className="w-4 h-4 rounded border-white/20 bg-raised accent-accent cursor-pointer"
                           />
                           Evidenzia Principale
+                          <Tooltip content="Se spuntato, questo risultato avrà una scheda più grande e colorata nell'anteprima finale." />
                         </label>
                       </div>
                     </div>
@@ -631,9 +716,12 @@ export default function CalculatorBuilder({
             <div className="panel p-6 space-y-5 border border-white/10 bg-[#0C1019]">
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div>
-                  <h4 className="text-sm font-bold text-white">Abilita Blocco Risultati (Lead Gate)</h4>
+                  <h4 className="text-sm font-bold text-white flex items-center">
+                    Abilita Blocco Risultati (Lead Gate)
+                    <Tooltip content="Se attivo, oscura il prezzo stimato finché il visitatore non lascia il proprio nome ed email." />
+                  </h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    I risultati vengono nascosti finché l'utente non compila il modulo contatti.
+                    Consente di convertire fino a 5 volte più lead rispetto ai moduli anonimi.
                   </p>
                 </div>
                 <input
@@ -647,8 +735,9 @@ export default function CalculatorBuilder({
               {enableLeadGate && (
                 <div className="space-y-4 pt-1">
                   <div>
-                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                       URL Privacy Policy (Opzionale)
+                      <Tooltip content="Il link alla tua privacy policy. Se lo inserisci, la parola 'privacy policy' diventerà cliccabile." example="https://tuosito.it/privacy" />
                     </label>
                     <input
                       type="url"
@@ -660,8 +749,9 @@ export default function CalculatorBuilder({
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                      Testo Consenso Privacy Obbligatorio
+                    <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Testo Consenso Privacy
+                      <Tooltip content="La frase che compare accanto al quadratino da spuntare obbligatoriamente per legge." />
                     </label>
                     <input
                       type="text"
@@ -672,8 +762,9 @@ export default function CalculatorBuilder({
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                       Azione dopo l'invio
+                      <Tooltip content="Scegli se mostrare il preventivo all'istante o mandare l'utente su un'altra pagina del tuo sito (es. pagina di ringraziamento)." />
                     </label>
                     <select
                       value={postSubmitAction}
@@ -701,8 +792,12 @@ export default function CalculatorBuilder({
                   )}
 
                   <div>
-                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                      Webhook di Invio Istantaneo (Make / Zapier / n8n)
+                    <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Webhook Istantaneo (Make / Zapier / n8n)
+                      <Tooltip
+                        content="Se usi automazioni esterne, inserisci qui l'URL del webhook: ogni volta che un cliente compila il form, i dati verranno inviati al tuo CRM o su Slack in 1 secondo."
+                        example="https://hook.eu1.make.com/abcdef123456"
+                      />
                     </label>
                     <input
                       type="url"
@@ -721,8 +816,9 @@ export default function CalculatorBuilder({
           {activeTab === 'style' && (
             <div className="panel p-6 space-y-6 border border-white/10 bg-[#0C1019]">
               <div>
-                <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-3">
+                <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-3">
                   Colore Primario del Terminale
+                  <Tooltip content="Il colore dei bottoni, degli slider e delle evidenziazioni nel widget incorporato sul tuo sito." />
                 </label>
                 <div className="flex items-center gap-3">
                   {SWATCHES.map((s) => (
@@ -748,8 +844,11 @@ export default function CalculatorBuilder({
 
               <div className="pt-5 border-t border-white/10 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-white">Stato Pubblicazione</h4>
-                  <p className="text-xs text-slate-400">Se disattivato, l'embed mostrerà un avviso di manutenzione.</p>
+                  <h4 className="text-sm font-bold text-white flex items-center">
+                    Stato Pubblicazione
+                    <Tooltip content="Se metti in 'PAUSA', chiunque visiti il calcolatore sul tuo sito vedrà un messaggio di manutenzione." />
+                  </h4>
+                  <p className="text-xs text-slate-400">Attiva o disattiva la visibilità pubblica del calcolatore.</p>
                 </div>
                 <button
                   type="button"
@@ -807,7 +906,7 @@ export default function CalculatorBuilder({
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Copia questo codice HTML completo di auto-ridimensionamento dinamico:
+              Copia questo codice HTML completo di auto-ridimensionamento dinamico per incollarlo su WordPress, Webflow, Shopify o nel codice del tuo sito:
             </p>
 
             <pre className="code-block p-4 text-[11px] text-accent-hi overflow-x-auto selection:bg-accent/40 font-mono">
