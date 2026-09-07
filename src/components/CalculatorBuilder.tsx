@@ -47,6 +47,7 @@ export default function CalculatorBuilder({
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
+  // Stato Terminale
   const [title, setTitle] = useState(initialData?.title || 'Nuovo Terminale di Stima');
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor || '#4D7CFE');
@@ -61,62 +62,56 @@ export default function CalculatorBuilder({
   const [redirectUrl, setRedirectUrl] = useState(initialData?.redirectUrl || '');
   const [webhookUrl, setWebhookUrl] = useState(initialData?.webhookUrl || '');
 
+  // Parametri di Input
   const [inputs, setInputs] = useState<CalculatorInput[]>(
     initialData?.inputs?.length
       ? initialData.inputs
       : [
           {
             id: 'inp_1',
-            variable: 'volume',
+            variable: 'pagine',
             type: 'slider',
-            label: 'Volume Mensile Stimato',
-            defaultValue: 1000,
-            min: 100,
-            max: 10000,
-            step: 50,
+            label: 'Numero pagine',
+            defaultValue: 5,
+            min: 1,
+            max: 30,
+            step: 1,
             prefix: '',
             suffix: 'unità'
           },
           {
             id: 'inp_2',
-            variable: 'prezzo_unitario',
+            variable: 'ore',
             type: 'number',
-            label: 'Costo Medio per Unità',
-            defaultValue: 45,
-            min: 1,
-            max: 1000,
-            step: 1,
-            prefix: '€',
+            label: 'Complessità Grafica (Ore)',
+            defaultValue: 40,
+            min: 10,
+            max: 200,
+            step: 5,
+            prefix: 'h',
             suffix: ''
           }
         ]
   );
 
+  // Risultati & Formule
   const [outputs, setOutputs] = useState<CalculatorOutput[]>(
     initialData?.outputs?.length
       ? initialData.outputs
       : [
           {
             id: 'out_1',
-            variable: 'totale_annuo',
-            label: 'Ricavo Annuale Stimato',
-            formula: 'volume * prezzo_unitario * 12',
+            variable: 'totale',
+            label: 'Stima Totale Progetto',
+            formula: '(pagine * 120) + (ore * 45)',
             prefix: '€',
-            suffix: '/ anno',
+            suffix: '',
             highlight: true
-          },
-          {
-            id: 'out_2',
-            variable: 'totale_mensile',
-            label: 'Ricavo Mensile',
-            formula: 'volume * prezzo_unitario',
-            prefix: '€',
-            suffix: '/ mese',
-            highlight: false
           }
         ]
   );
 
+  // Validazione Formule Real-Time
   const formulaValidation = useMemo(() => {
     const mockValues: Record<string, number> = {};
     inputs.forEach((inp) => {
@@ -136,15 +131,16 @@ export default function CalculatorBuilder({
             sampleResult: val.toLocaleString('it-IT', { maximumFractionDigits: 2 })
           };
         } else {
-          status[out.id || out.variable] = { isValid: false, sampleResult: 'Risultato non valido' };
+          status[out.id || out.variable] = { isValid: false, sampleResult: 'Non valido' };
         }
       } catch (err: any) {
-        status[out.id || out.variable] = { isValid: false, sampleResult: err.message || 'Errore sintassi' };
+        status[out.id || out.variable] = { isValid: false, sampleResult: err.message || 'Errore' };
       }
     });
     return status;
   }, [inputs, outputs]);
 
+  // Gestione Input con parser numerico permissivo (non blocca se il campo è vuoto)
   const handleAddInput = () => {
     const nextIdx = inputs.length + 1;
     const nextId = `inp_${Date.now().toString().slice(-4)}`;
@@ -155,7 +151,7 @@ export default function CalculatorBuilder({
         variable: `parametro_${nextIdx}`,
         type: 'slider',
         label: `Parametro ${nextIdx}`,
-        defaultValue: 50,
+        defaultValue: 10,
         min: 0,
         max: 100,
         step: 1
@@ -163,10 +159,10 @@ export default function CalculatorBuilder({
     ]);
   };
 
-  const handleUpdateInput = (index: number, field: keyof CalculatorInput, value: any) => {
+  const handleUpdateInput = (index: number, field: keyof CalculatorInput, rawValue: any) => {
     setInputs((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
+      copy[index] = { ...copy[index], [field]: rawValue };
       return copy;
     });
   };
@@ -175,6 +171,7 @@ export default function CalculatorBuilder({
     setInputs((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Gestione Output
   const handleAddOutput = () => {
     const nextIdx = outputs.length + 1;
     const nextId = `out_${Date.now().toString().slice(-4)}`;
@@ -208,7 +205,13 @@ export default function CalculatorBuilder({
     await onSave({
       id: initialData?.id,
       title,
-      inputs,
+      inputs: inputs.map((inp) => ({
+        ...inp,
+        defaultValue: Number(inp.defaultValue) || 0,
+        min: Number(inp.min) || 0,
+        max: Number(inp.max) || 100,
+        step: Number(inp.step) || 1
+      })),
       outputs,
       primaryColor,
       enableLeadGate,
@@ -224,7 +227,6 @@ export default function CalculatorBuilder({
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://calcflow.io';
   const targetCalcId = initialData?.id || 'ID_CALCOLATORE';
 
-  // Snippet con listener postMessage nativo per auto-resize
   const embedCode = `<!-- CalcFlow Terminal Embed -->
 <iframe
   id="cf-frame-${targetCalcId}"
@@ -252,18 +254,19 @@ export default function CalculatorBuilder({
 
   return (
     <div className="w-full">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-line mb-6">
+      {/* Intestazione Barra Superiore */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/10 mb-6">
         <div className="flex items-center gap-3">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="text-xl sm:text-2xl font-bold text-ink bg-transparent border-b border-transparent hover:border-line focus:border-accent focus:outline-none transition py-1"
+            className="text-xl sm:text-2xl font-bold text-white bg-transparent border-b border-white/20 hover:border-white focus:border-accent focus:outline-none transition py-1"
             placeholder="Nome del Calcolatore..."
           />
           <span className={`badge ${isPublished ? 'badge-mint' : 'badge-amber'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? 'bg-mint' : 'bg-amber'}`} />
-            {isPublished ? 'Online' : 'In Pausa'}
+            {isPublished ? 'ONLINE' : 'IN PAUSA'}
           </span>
         </div>
 
@@ -272,7 +275,7 @@ export default function CalculatorBuilder({
             <button
               type="button"
               onClick={() => setShowEmbedModal(true)}
-              className="btn btn-ghost btn-sm text-slate-300 hover:text-white"
+              className="btn btn-ghost btn-sm text-slate-200 hover:text-white"
             >
               Codice Embed &lt;/&gt;
             </button>
@@ -282,26 +285,20 @@ export default function CalculatorBuilder({
             type="button"
             onClick={handleSubmit}
             disabled={saving}
-            className="btn btn-primary btn-sm cursor-pointer"
+            className="btn btn-primary btn-sm !px-6 !py-2.5 font-bold shadow-[0_0_20px_rgba(77,124,254,0.4)] cursor-pointer"
           >
-            {saving ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Scrittura…
-              </span>
-            ) : (
-              'Salva Modifiche'
-            )}
+            {saving ? 'Salvataggio…' : 'SALVA MODIFICHE'}
           </button>
         </div>
       </div>
 
-      <div className="flex lg:hidden grid-cols-2 gap-1 p-1 mb-6 rounded-lg bg-raised border border-line">
+      {/* Tabs Mobile */}
+      <div className="flex lg:hidden grid-cols-2 gap-1 p-1 mb-6 rounded-lg bg-raised border border-white/10">
         <button
           type="button"
           onClick={() => setMobileView('editor')}
-          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded cursor-pointer ${
-            mobileView === 'editor' ? 'bg-overlay text-ink font-bold' : 'text-faint'
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+            mobileView === 'editor' ? 'bg-white/10 text-white font-bold' : 'text-slate-400'
           }`}
         >
           Editor Configurazione
@@ -309,74 +306,55 @@ export default function CalculatorBuilder({
         <button
           type="button"
           onClick={() => setMobileView('preview')}
-          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded cursor-pointer ${
-            mobileView === 'preview' ? 'bg-overlay text-ink font-bold' : 'text-faint'
+          className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider rounded ${
+            mobileView === 'preview' ? 'bg-white/10 text-white font-bold' : 'text-slate-400'
           }`}
         >
           Anteprima Live
         </button>
       </div>
 
+      {/* Split Screen Principale */}
       <div className="grid lg:grid-cols-12 gap-8 items-start">
+        {/* Colonna SX: Configurazione Editor */}
         <div className={`lg:col-span-6 space-y-6 ${mobileView === 'preview' ? 'hidden lg:block' : ''}`}>
-          <div className="flex border-b border-line gap-2 overflow-x-auto pb-px font-mono text-xs uppercase tracking-wider">
-            <button
-              type="button"
-              onClick={() => setActiveTab('inputs')}
-              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'inputs'
-                  ? 'border-accent text-accent-hi font-bold'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              1. Input ({inputs.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('outputs')}
-              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'outputs'
-                  ? 'border-accent text-accent-hi font-bold'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              2. Risultati ({outputs.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('gate')}
-              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'gate'
-                  ? 'border-accent text-accent-hi font-bold'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              3. Lead Gate
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('style')}
-              className={`pb-3 px-3 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'style'
-                  ? 'border-accent text-accent-hi font-bold'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              4. Stile & Stato
-            </button>
+          {/* Barra Navigazione Tabs */}
+          <div className="flex border-b border-white/10 gap-3 pb-px font-mono text-xs uppercase tracking-wider">
+            {[
+              { id: 'inputs', label: `1. Input (${inputs.length})` },
+              { id: 'outputs', label: `2. Risultati (${outputs.length})` },
+              { id: 'gate', label: '3. Lead Gate' },
+              { id: 'style', label: '4. Stile & Stato' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`pb-3 px-3 transition-colors border-b-2 font-semibold cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'border-accent text-white font-bold'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
+          {/* TAB 1: INPUT */}
           {activeTab === 'inputs' && (
             <div className="space-y-4">
               {inputs.map((inp, idx) => (
-                <div key={inp.id || idx} className="panel p-4 space-y-3 relative">
+                <div key={inp.id || idx} className="panel p-5 space-y-4 border border-white/10 bg-[#0C1019]">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-[10px] text-faint">PARAMETRO #{idx + 1}</span>
+                    <span className="font-mono text-xs font-bold text-accent-hi uppercase tracking-wider">
+                      PARAMETRO #{idx + 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveInput(idx)}
                       disabled={inputs.length <= 1}
-                      className="text-xs text-rose hover:underline disabled:opacity-30 disabled:no-underline cursor-pointer"
+                      className="text-xs font-mono text-rose hover:underline disabled:opacity-30 cursor-pointer"
                     >
                       Rimuovi
                     </button>
@@ -384,19 +362,19 @@ export default function CalculatorBuilder({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Etichetta Visibile
                       </label>
                       <input
                         type="text"
                         value={inp.label}
                         onChange={(e) => handleUpdateInput(idx, 'label', e.target.value)}
-                        className="field text-xs"
-                        placeholder="Es: Volume Mensile"
+                        className="field text-sm font-medium"
+                        placeholder="Es: Numero pagine"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Identificatore Variabile
                       </label>
                       <input
@@ -409,45 +387,45 @@ export default function CalculatorBuilder({
                             e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
                           )
                         }
-                        className="field field-mono text-xs text-accent-hi"
-                        placeholder="Es: volume"
+                        className="field field-mono text-sm font-semibold text-accent-hi"
+                        placeholder="Es: pagine"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Tipologia
                       </label>
                       <select
                         value={inp.type}
                         onChange={(e) => handleUpdateInput(idx, 'type', e.target.value)}
-                        className="field text-xs"
+                        className="field text-xs font-medium"
                       >
                         <option value="slider">Slider</option>
                         <option value="number">Campo Numerico</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Valore Iniziale
                       </label>
                       <input
                         type="number"
-                        value={inp.defaultValue}
-                        onChange={(e) => handleUpdateInput(idx, 'defaultValue', parseFloat(e.target.value) || 0)}
+                        value={inp.defaultValue ?? ''}
+                        onChange={(e) => handleUpdateInput(idx, 'defaultValue', e.target.value === '' ? '' : Number(e.target.value))}
                         className="field field-mono text-xs"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         Passo (Step)
                       </label>
                       <input
                         type="number"
-                        value={inp.step ?? 1}
-                        onChange={(e) => handleUpdateInput(idx, 'step', parseFloat(e.target.value) || 1)}
+                        value={inp.step ?? ''}
+                        onChange={(e) => handleUpdateInput(idx, 'step', e.target.value === '' ? '' : Number(e.target.value))}
                         className="field field-mono text-xs"
                       />
                     </div>
@@ -455,25 +433,31 @@ export default function CalculatorBuilder({
 
                   <div className="grid grid-cols-4 gap-3">
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Minimo</label>
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Minimo
+                      </label>
                       <input
                         type="number"
-                        value={inp.min ?? 0}
-                        onChange={(e) => handleUpdateInput(idx, 'min', parseFloat(e.target.value) || 0)}
+                        value={inp.min ?? ''}
+                        onChange={(e) => handleUpdateInput(idx, 'min', e.target.value === '' ? '' : Number(e.target.value))}
                         className="field field-mono text-xs"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Massimo</label>
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Massimo
+                      </label>
                       <input
                         type="number"
-                        value={inp.max ?? 100}
-                        onChange={(e) => handleUpdateInput(idx, 'max', parseFloat(e.target.value) || 100)}
+                        value={inp.max ?? ''}
+                        onChange={(e) => handleUpdateInput(idx, 'max', e.target.value === '' ? '' : Number(e.target.value))}
                         className="field field-mono text-xs"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Prefisso</label>
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Prefisso
+                      </label>
                       <input
                         type="text"
                         value={inp.prefix || ''}
@@ -483,12 +467,14 @@ export default function CalculatorBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Suffisso</label>
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Suffisso
+                      </label>
                       <input
                         type="text"
                         value={inp.suffix || ''}
                         onChange={(e) => handleUpdateInput(idx, 'suffix', e.target.value)}
-                        placeholder="Es: / mese"
+                        placeholder="Es: unità"
                         className="field text-xs"
                       />
                     </div>
@@ -499,33 +485,36 @@ export default function CalculatorBuilder({
               <button
                 type="button"
                 onClick={handleAddInput}
-                className="btn btn-ghost w-full !py-3 text-xs border-dashed cursor-pointer"
+                className="btn btn-ghost w-full !py-3 font-mono text-xs border-dashed text-slate-300 hover:text-white cursor-pointer"
               >
                 + Aggiungi Parametro Input
               </button>
             </div>
           )}
 
+          {/* TAB 2: RISULTATI (FORMULE) */}
           {activeTab === 'outputs' && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-surface border border-line text-xs text-muted leading-relaxed">
-                <span className="font-bold text-ink">Guida formule:</span> Usa i nomi delle variabili definiti
-                negli input (es. <code className="text-cyan">{inputs.map((i) => i.variable).join(', ')}</code>).
-                Supporta operatori aritmetici <code className="text-accent-hi">+ - * /</code>, parentesi e
-                operatore ternario <code className="text-mint">condizione ? se_vero : se_falso</code>.
+              <div className="p-4 rounded-xl bg-[#0C1019] border border-white/10 text-xs text-slate-300 leading-relaxed">
+                <span className="font-bold text-white">Variabili disponibili:</span>{' '}
+                <code className="text-cyan font-mono font-semibold">
+                  {inputs.map((i) => i.variable).filter(Boolean).join(', ') || 'nessuna'}
+                </code>
               </div>
 
               {outputs.map((out, idx) => {
                 const validation = formulaValidation[out.id || out.variable];
                 return (
-                  <div key={out.id || idx} className="panel p-4 space-y-3">
+                  <div key={out.id || idx} className="panel p-5 space-y-4 border border-white/10 bg-[#0C1019]">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-mono text-[10px] text-faint">VOCE RISULTATO #{idx + 1}</span>
+                      <span className="font-mono text-xs font-bold text-mint uppercase tracking-wider">
+                        VOCE RISULTATO #{idx + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleRemoveOutput(idx)}
                         disabled={outputs.length <= 1}
-                        className="text-xs text-rose hover:underline disabled:opacity-30 disabled:no-underline cursor-pointer"
+                        className="text-xs font-mono text-rose hover:underline disabled:opacity-30 cursor-pointer"
                       >
                         Rimuovi
                       </button>
@@ -533,20 +522,20 @@ export default function CalculatorBuilder({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                           Nome Risultato
                         </label>
                         <input
                           type="text"
                           value={out.label}
                           onChange={(e) => handleUpdateOutput(idx, 'label', e.target.value)}
-                          className="field text-xs"
-                          placeholder="Es: Risparmio Totale"
+                          className="field text-sm font-medium"
+                          placeholder="Es: Totale Stimato"
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
-                          Variabile Risultato
+                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                          Identificatore Variabile
                         </label>
                         <input
                           type="text"
@@ -558,26 +547,20 @@ export default function CalculatorBuilder({
                               e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
                             )
                           }
-                          className="field field-mono text-xs text-accent-hi"
-                          placeholder="Es: risparmio_totale"
+                          className="field field-mono text-sm font-semibold text-accent-hi"
+                          placeholder="Es: totale"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
                           Formula Matematica
                         </label>
                         {validation && (
-                          <span
-                            className={`font-mono text-[9px] ${
-                              validation.isValid ? 'text-mint' : 'text-rose'
-                            }`}
-                          >
-                            {validation.isValid
-                              ? `✓ Valida (Test: ${validation.sampleResult})`
-                              : `✕ ${validation.sampleResult}`}
+                          <span className={`font-mono text-[11px] font-bold ${validation.isValid ? 'text-mint' : 'text-rose'}`}>
+                            {validation.isValid ? `✓ Valida (Test: ${validation.sampleResult})` : `✕ ${validation.sampleResult}`}
                           </span>
                         )}
                       </div>
@@ -585,16 +568,18 @@ export default function CalculatorBuilder({
                         type="text"
                         value={out.formula}
                         onChange={(e) => handleUpdateOutput(idx, 'formula', e.target.value)}
-                        className={`field field-mono text-xs ${
+                        className={`field field-mono text-xs font-semibold ${
                           validation && !validation.isValid ? 'border-rose focus:border-rose' : ''
                         }`}
-                        placeholder="Es: volume * 1.2"
+                        placeholder="Es: (pagine * 120) + (ore * 45)"
                       />
                     </div>
 
                     <div className="grid grid-cols-3 gap-3 items-center">
                       <div>
-                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Prefisso</label>
+                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                          Prefisso
+                        </label>
                         <input
                           type="text"
                           value={out.prefix || ''}
@@ -604,7 +589,9 @@ export default function CalculatorBuilder({
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">Suffisso</label>
+                        <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                          Suffisso
+                        </label>
                         <input
                           type="text"
                           value={out.suffix || ''}
@@ -613,13 +600,13 @@ export default function CalculatorBuilder({
                           className="field text-xs"
                         />
                       </div>
-                      <div className="pt-4">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs text-muted select-none">
+                      <div className="pt-5">
+                        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-200 select-none">
                           <input
                             type="checkbox"
                             checked={out.highlight || false}
                             onChange={(e) => handleUpdateOutput(idx, 'highlight', e.target.checked)}
-                            className="checkbox"
+                            className="w-4 h-4 rounded border-white/20 bg-raised accent-accent cursor-pointer"
                           />
                           Evidenzia Principale
                         </label>
@@ -632,65 +619,66 @@ export default function CalculatorBuilder({
               <button
                 type="button"
                 onClick={handleAddOutput}
-                className="btn btn-ghost w-full !py-3 text-xs border-dashed cursor-pointer"
+                className="btn btn-ghost w-full !py-3 font-mono text-xs border-dashed text-slate-300 hover:text-white cursor-pointer"
               >
                 + Aggiungi Voce Risultato
               </button>
             </div>
           )}
 
+          {/* TAB 3: LEAD GATE */}
           {activeTab === 'gate' && (
-            <div className="panel p-5 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-line">
+            <div className="panel p-6 space-y-5 border border-white/10 bg-[#0C1019]">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div>
-                  <h4 className="text-sm font-semibold text-ink">Abilita Blocco Risultati (Lead Gate)</h4>
-                  <p className="text-xs text-muted">
-                    I risultati vengono nascosti finché il visitatore non lascia email e nome.
+                  <h4 className="text-sm font-bold text-white">Abilita Blocco Risultati (Lead Gate)</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    I risultati vengono nascosti finché l'utente non compila il modulo contatti.
                   </p>
                 </div>
                 <input
                   type="checkbox"
                   checked={enableLeadGate}
                   onChange={(e) => setEnableLeadGate(e.target.checked)}
-                  className="checkbox"
+                  className="w-5 h-5 rounded border-white/20 bg-raised accent-accent cursor-pointer"
                 />
               </div>
 
               {enableLeadGate && (
-                <div className="space-y-4 pt-2">
+                <div className="space-y-4 pt-1">
                   <div>
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
-                      URL Privacy Policy
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      URL Privacy Policy (Opzionale)
                     </label>
                     <input
                       type="url"
                       value={privacyPolicyUrl}
                       onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
                       placeholder="https://tuosito.it/privacy"
-                      className="field text-xs"
+                      className="field text-xs font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
-                      Testo Consenso Privacy
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Testo Consenso Privacy Obbligatorio
                     </label>
                     <input
                       type="text"
                       value={privacyText}
                       onChange={(e) => setPrivacyText(e.target.value)}
-                      className="field text-xs"
+                      className="field text-xs font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
-                      Azione dopo l’invio del contatto
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Azione dopo l'invio
                     </label>
                     <select
                       value={postSubmitAction}
                       onChange={(e) => setPostSubmitAction(e.target.value as any)}
-                      className="field text-xs"
+                      className="field text-xs font-medium"
                     >
                       <option value="unlock">Sblocca e mostra i risultati a schermo</option>
                       <option value="redirect">Reindirizza a una pagina esterna</option>
@@ -699,7 +687,7 @@ export default function CalculatorBuilder({
 
                   {postSubmitAction === 'redirect' && (
                     <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
+                      <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                         URL di Reindirizzamento
                       </label>
                       <input
@@ -713,8 +701,8 @@ export default function CalculatorBuilder({
                   )}
 
                   <div>
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-faint mb-1">
-                      Webhook di Invio Istantaneo (Make, Zapier, n8n, CRM)
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Webhook di Invio Istantaneo (Make / Zapier / n8n)
                     </label>
                     <input
                       type="url"
@@ -723,19 +711,17 @@ export default function CalculatorBuilder({
                       placeholder="https://hook.eu1.make.com/..."
                       className="field field-mono text-xs"
                     />
-                    <span className="block font-mono text-[9px] text-faint mt-1">
-                      Invia l’intero stato degli input e dei calcoli appena il lead viene registrato.
-                    </span>
                   </div>
                 </div>
               )}
             </div>
           )}
 
+          {/* TAB 4: STILE & STATO */}
           {activeTab === 'style' && (
-            <div className="panel p-5 space-y-6">
+            <div className="panel p-6 space-y-6 border border-white/10 bg-[#0C1019]">
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-wider text-faint mb-3">
+                <label className="block font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-3">
                   Colore Primario del Terminale
                 </label>
                 <div className="flex items-center gap-3">
@@ -746,7 +732,7 @@ export default function CalculatorBuilder({
                       onClick={() => setPrimaryColor(s.value)}
                       title={s.label}
                       className={`w-9 h-9 rounded-lg border transition cursor-pointer ${
-                        primaryColor === s.value ? 'scale-110 border-white shadow-md' : 'border-line'
+                        primaryColor === s.value ? 'scale-110 border-white shadow-md' : 'border-white/10'
                       }`}
                       style={{ backgroundColor: s.value }}
                     />
@@ -755,37 +741,38 @@ export default function CalculatorBuilder({
                     type="text"
                     value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="field field-mono text-xs !w-28 uppercase"
+                    className="field field-mono text-xs !w-28 uppercase font-semibold"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-line flex items-center justify-between">
+              <div className="pt-5 border-t border-white/10 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-ink">Stato Pubblicazione</h4>
-                  <p className="text-xs text-muted">Se disattivato, l’embed mostrerà un avviso di manutenzione.</p>
+                  <h4 className="text-sm font-bold text-white">Stato Pubblicazione</h4>
+                  <p className="text-xs text-slate-400">Se disattivato, l'embed mostrerà un avviso di manutenzione.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsPublished(!isPublished)}
-                  className={`btn btn-sm ${isPublished ? 'btn-soft' : 'btn-ghost'} cursor-pointer`}
+                  className={`btn btn-sm ${isPublished ? 'btn-soft' : 'btn-ghost'} font-mono uppercase tracking-wider cursor-pointer`}
                 >
-                  {isPublished ? 'Online' : 'In Pausa'}
+                  {isPublished ? 'ONLINE' : 'IN PAUSA'}
                 </button>
               </div>
             </div>
           )}
         </div>
 
+        {/* Colonna DX: Anteprima Live sticky */}
         <div className={`lg:col-span-6 sticky top-24 ${mobileView === 'editor' ? 'hidden lg:block' : ''}`}>
           <div className="flex items-center justify-between pb-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
+            <span className="font-mono text-xs uppercase tracking-[0.16em] text-slate-300 font-bold">
               Anteprima Tempo Reale
             </span>
-            <span className="badge badge-accent">Live Preview</span>
+            <span className="badge badge-accent">LIVE PREVIEW</span>
           </div>
 
-          <div className="p-4 rounded-xl border border-line-strong/40 bg-surface/50 backdrop-blur-sm shadow-2xl">
+          <div className="p-4 rounded-2xl border border-white/10 bg-surface/50 backdrop-blur-md shadow-2xl">
             <CalculatorPreview
               calculatorId={initialData?.id || 'preview'}
               inputs={inputs}
@@ -802,24 +789,25 @@ export default function CalculatorBuilder({
         </div>
       </div>
 
+      {/* Modal Snippet Embed */}
       {showEmbedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-md">
-          <div className="panel p-6 max-w-xl w-full space-y-4 shadow-2xl border-line-strong">
-            <div className="flex items-center justify-between pb-2 border-b border-line">
-              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+          <div className="panel p-6 max-w-xl w-full space-y-4 shadow-2xl border-white/10 bg-[#0C1019]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-white">
                 Incorporamento Calcolatore
               </h3>
               <button
                 type="button"
                 onClick={() => setShowEmbedModal(false)}
-                className="text-muted hover:text-ink cursor-pointer"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-muted leading-relaxed">
-              Copia questo codice HTML completo di script di auto-ridimensionamento. Incollalo in qualsiasi CMS (WordPress, Webflow, Framer, Shopify) o sorgente personalizzato:
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Copia questo codice HTML completo di auto-ridimensionamento dinamico:
             </p>
 
             <pre className="code-block p-4 text-[11px] text-accent-hi overflow-x-auto selection:bg-accent/40 font-mono">
