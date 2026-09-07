@@ -167,7 +167,7 @@ export default function SettingsDrawer({ isOpen, onClose, userEmail }: SettingsD
               </div>
               <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-1">
                 <strong className="text-accent-hi font-mono text-[11px] block">3. Inserimento sul sito</strong>
-                Copia il codice dal tasto "Codice Embed" e incollalo come blocco HTML nella pagina del tuo sito.
+                Copia il codice dal tasto &quot;Codice Embed&quot; e incollalo come blocco HTML nella pagina del tuo sito.
               </div>
             </div>
           )}

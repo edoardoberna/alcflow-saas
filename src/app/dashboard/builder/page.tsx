@@ -67,7 +67,7 @@ function BuilderContent() {
     setErrorMessage(null);
 
     // Mappa identica allo schema rilevato nelle tue colonne
-    const payload: Record<string, any> = {
+    const payload = {
       user_id: userId,
       title: data.title,
       inputs: data.inputs,
@@ -107,8 +107,8 @@ function BuilderContent() {
           router.push(`/dashboard/builder?id=${inserted.id}`);
         }
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Errore durante il salvataggio.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Errore durante il salvataggio.');
     } finally {
       setSaving(false);
     }

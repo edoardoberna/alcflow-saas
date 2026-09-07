@@ -31,6 +31,10 @@ interface CalculatorBuilderProps {
   saving?: boolean;
 }
 
+type BuilderTab = 'inputs' | 'outputs' | 'gate' | 'style';
+type InputFieldValue = CalculatorInput[keyof CalculatorInput];
+type OutputFieldValue = CalculatorOutput[keyof CalculatorOutput];
+
 const SWATCHES = [
   { label: 'Accento Blu', value: '#4D7CFE' },
   { label: 'Ciano Signal', value: '#4CC9FF' },
@@ -44,7 +48,7 @@ export default function CalculatorBuilder({
   onSave,
   saving = false
 }: CalculatorBuilderProps) {
-  const [activeTab, setActiveTab] = useState<'inputs' | 'outputs' | 'gate' | 'style'>('inputs');
+  const [activeTab, setActiveTab] = useState<BuilderTab>('inputs');
   const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
@@ -136,8 +140,11 @@ export default function CalculatorBuilder({
         } else {
           status[out.id || out.variable] = { isValid: false, sampleResult: 'Non valido' };
         }
-      } catch (err: any) {
-        status[out.id || out.variable] = { isValid: false, sampleResult: err.message || 'Errore' };
+      } catch (err: unknown) {
+        status[out.id || out.variable] = {
+          isValid: false,
+          sampleResult: err instanceof Error ? err.message : 'Errore'
+        };
       }
     });
     return status;
@@ -161,7 +168,7 @@ export default function CalculatorBuilder({
     ]);
   };
 
-  const handleUpdateInput = (index: number, field: keyof CalculatorInput, rawValue: any) => {
+  const handleUpdateInput = (index: number, field: keyof CalculatorInput, rawValue: InputFieldValue) => {
     setInputs((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: rawValue };
@@ -189,7 +196,7 @@ export default function CalculatorBuilder({
     ]);
   };
 
-  const handleUpdateOutput = (index: number, field: keyof CalculatorOutput, value: any) => {
+  const handleUpdateOutput = (index: number, field: keyof CalculatorOutput, value: OutputFieldValue) => {
     setOutputs((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: value };
@@ -307,7 +314,7 @@ export default function CalculatorBuilder({
           <div className="grid sm:grid-cols-3 gap-3 pt-1 text-[11px] text-slate-300 leading-relaxed">
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
               <span className="font-bold text-accent-hi block mb-1">1. Imposta gli Input</span>
-              Scegli cosa fa muovere il visitatore (es. cursore per i metri quadri o le ore). A ciascuno assegna un nome breve in minuscolo (la "variabile").
+              Scegli cosa fa muovere il visitatore (es. cursore per i metri quadri o le ore). A ciascuno assegna un nome breve in minuscolo (la &quot;variabile&quot;).
             </div>
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
               <span className="font-bold text-accent-hi block mb-1">2. Scegli la Formula</span>
@@ -400,7 +407,7 @@ export default function CalculatorBuilder({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as BuilderTab)}
                 className={`pb-3 px-3 transition-colors border-b-2 font-semibold cursor-pointer ${
                   activeTab === tab.id
                     ? 'border-accent text-white font-bold'
@@ -826,12 +833,12 @@ export default function CalculatorBuilder({
 
                   <div>
                     <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                      Azione dopo l'invio
+                      Azione dopo l&apos;invio
                       <Tooltip content="Scegli se mostrare il preventivo all'istante o mandare l'utente su un'altra pagina del tuo sito (es. pagina di ringraziamento)." />
                     </label>
                     <select
                       value={postSubmitAction}
-                      onChange={(e) => setPostSubmitAction(e.target.value as any)}
+                      onChange={(e) => setPostSubmitAction(e.target.value as CalculatorData['postSubmitAction'])}
                       className="field text-xs font-medium"
                     >
                       <option value="unlock">Sblocca e mostra i risultati a schermo</option>

@@ -57,12 +57,14 @@ export default function StandaloneEmbedPage() {
     const utmCampaign = searchParams.get('utm_campaign') || '';
     const pageUrl = document.referrer || (typeof window !== 'undefined' ? window.location.href : '');
 
-    setTrackingData({
-      utmSource,
-      utmMedium,
-      utmCampaign,
-      pageUrl,
-      deviceType: device
+    const trackingTimeoutId = window.setTimeout(() => {
+      setTrackingData({
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        pageUrl,
+        deviceType: device
+      });
     });
 
     async function fetchEmbedCalc() {
@@ -94,6 +96,7 @@ export default function StandaloneEmbedPage() {
     }
 
     fetchEmbedCalc();
+    return () => window.clearTimeout(trackingTimeoutId);
   }, [id, searchParams]);
 
   if (loading) {
@@ -123,7 +126,7 @@ export default function StandaloneEmbedPage() {
 
   return (
     <div className="min-h-screen bg-[#080C14] p-2 sm:p-6 flex items-center justify-center">
-      <CalculatorPreview
+    <CalculatorPreview
         calculatorId={calc.id}
         inputs={resolvedInputs}
         outputs={resolvedOutputs}
@@ -135,6 +138,7 @@ export default function StandaloneEmbedPage() {
         redirectUrl={calc.redirect_url || ''}
         webhookUrl={calc.webhook_url || ''}
         trackingData={trackingData}
+        showAdminBar={true}
       />
     </div>
   );

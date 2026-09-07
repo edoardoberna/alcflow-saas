@@ -63,11 +63,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const setAuthCookie = () => {
-    // 7 giorni di persistenza sessione per il middleware Next.js
-    document.cookie = "calcflow_auth=true; path=/; max-age=604800; SameSite=Lax";
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -77,16 +72,14 @@ export default function LoginPage() {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setAuthCookie();
         router.push('/dashboard');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setAuthCookie();
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Errore durante l’autenticazione');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Errore durante l’autenticazione');
     } finally {
       setLoading(false);
     }

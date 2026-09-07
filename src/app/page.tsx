@@ -148,8 +148,8 @@ function useReveal<T extends HTMLElement>(threshold = 0.12) {
     const el = ref.current;
     if (!el) return;
     if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
+      const timeoutId = window.setTimeout(() => setVisible(true));
+      return () => window.clearTimeout(timeoutId);
     }
     const io = new IntersectionObserver(
       (entries) => {
@@ -165,29 +165,6 @@ function useReveal<T extends HTMLElement>(threshold = 0.12) {
   }, [threshold]);
 
   return { ref, visible };
-}
-
-function useTilt(max = 5) {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty('--rx', `${(-py * max).toFixed(2)}deg`);
-    el.style.setProperty('--ry', `${(px * max).toFixed(2)}deg`);
-  }, [max]);
-
-  const onMouseLeave = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.setProperty('--rx', '0deg');
-    el.style.setProperty('--ry', '0deg');
-  }, []);
-
-  return { ref, onMouseMove, onMouseLeave };
 }
 
 /* ==========================================================================
@@ -381,8 +358,8 @@ function Stat({
   useEffect(() => {
     if (!visible) return;
     if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setN(value);
-      return;
+      const timeoutId = window.setTimeout(() => setN(value));
+      return () => window.clearTimeout(timeoutId);
     }
     const start = performance.now();
     const dur = 1500;
@@ -407,12 +384,27 @@ function Stat({
 }
 
 function TiltCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const tilt = useTilt(4);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    const bounds = el.getBoundingClientRect();
+    const px = (e.clientX - bounds.left) / bounds.width - 0.5;
+    const py = (e.clientY - bounds.top) / bounds.height - 0.5;
+    el.style.setProperty('--rx', `${(-py * 4).toFixed(2)}deg`);
+    el.style.setProperty('--ry', `${(px * 4).toFixed(2)}deg`);
+  }, []);
+  const onMouseLeave = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty('--rx', '0deg');
+    el.style.setProperty('--ry', '0deg');
+  }, []);
   return (
     <div
-      ref={tilt.ref}
-      onMouseMove={tilt.onMouseMove}
-      onMouseLeave={tilt.onMouseLeave}
+      ref={ref}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
       className={`panel panel-hover tilt relative overflow-hidden p-6 ${className}`}
     >
       {children}

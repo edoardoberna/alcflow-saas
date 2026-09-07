@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useTransition } from 'react';
+import React, { useEffect, useState, useMemo, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -167,7 +167,7 @@ export default function DashboardPage() {
   const [selectedLead, setSelectedLead] = useState<LeadRecord | null>(null);
 
   // Caricamento Dati
-  const loadDashboardData = async (isManual = false) => {
+  const loadDashboardData = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
 
@@ -187,10 +187,14 @@ export default function DashboardPage() {
 
       setCalculators(calcsData || []);
 
-      const { data: leadsData } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const calculatorIds = (calcsData || []).map((calculator) => calculator.id);
+      const { data: leadsData } = calculatorIds.length
+        ? await supabase
+            .from('leads')
+            .select('*')
+            .in('calculator_id', calculatorIds)
+            .order('created_at', { ascending: false })
+        : { data: [] };
 
       setLeads(leadsData || []);
     } catch (err) {
@@ -199,11 +203,14 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [router]);
+    const timeoutId = window.setTimeout(() => {
+      void loadDashboardData();
+    });
+    return () => window.clearTimeout(timeoutId);
+  }, [loadDashboardData]);
 
   // Calcolo Metriche & Serie Temporali Reali
   const { metrics, realSeries } = useMemo(() => {
@@ -235,7 +242,18 @@ export default function DashboardPage() {
     const cumulativeCalcs = [1, 1, 1, 1, 1, Math.max(1, totalCalcs), totalCalcs];
     const cumulativeLeads = [0, 0, 0, 0, Math.max(0, totalLeads - 1), totalLeads, totalLeads];
     const cumulativeAvg = cumulativeLeads.map((l, i) => l / Math.max(1, cumulativeCalcs[i]));
-    const leadActivityTrend = [8, 12, 10, 15, 22, 28, 32];
+    const today = new Date();
+    const leadActivityTrend = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(today);
+      day.setHours(0, 0, 0, 0);
+      day.setDate(today.getDate() - (6 - index));
+      const nextDay = new Date(day);
+      nextDay.setDate(day.getDate() + 1);
+      return leads.filter((lead) => {
+        const createdAt = new Date(lead.created_at);
+        return createdAt >= day && createdAt < nextDay;
+      }).length;
+    });
 
     return {
       metrics: {
@@ -393,7 +411,6 @@ export default function DashboardPage() {
                     type="button"
                     onClick={async () => {
                       await supabase.auth.signOut();
-                      document.cookie = 'calcflow_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
                       router.push('/login');
                     }}
                     className="w-full text-left p-2 rounded hover:bg-rose/10 text-rose font-bold cursor-pointer"
@@ -466,7 +483,7 @@ export default function DashboardPage() {
                 <span className="font-mono text-xs font-bold text-amber block uppercase">PASSO 3</span>
                 <h4 className="font-bold text-white text-sm">Raccogli i Contatti</h4>
                 <p className="leading-relaxed text-slate-400">
-                  I visitatori inseriscono l'email per sbloccare la stima: i contatti compariranno qui sotto in tempo reale.
+                  I visitatori inseriscono l&apos;email per sbloccare la stima: i contatti compariranno qui sotto in tempo reale.
                 </p>
               </div>
             </div>

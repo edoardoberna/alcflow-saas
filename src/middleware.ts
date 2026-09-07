@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasAuth = request.cookies.has('calcflow_auth');
 
   // 1. Le rotte di incorporamento /embed DEVONO essere sempre pubbliche e intoccabili
   if (pathname.startsWith('/embed')) {
@@ -12,17 +12,58 @@ export function middleware(request: NextRequest) {
 
   // 2. Protezione delle rotte riservate (dashboard e builder)
   if (pathname.startsWith('/dashboard')) {
-    if (!hasAuth) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.next();
+    }
+
+    const response = NextResponse.next({ request });
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          });
+        }
+      }
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       const loginUrl = new URL('/login', request.url);
       return NextResponse.redirect(loginUrl);
     }
-    return NextResponse.next();
+    return response;
   }
 
   // 3. Se l'utente autenticato visita /login, reindirizza alla dashboard
-  if (pathname === '/login' && hasAuth) {
-    const dashUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(dashUrl);
+  if (pathname === '/login') {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseAnonKey) {
+      const response = NextResponse.next({ request });
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          }
+        }
+      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const dashUrl = new URL('/dashboard', request.url);
+        return NextResponse.redirect(dashUrl);
+      }
+      return response;
+    }
   }
 
   return NextResponse.next();
