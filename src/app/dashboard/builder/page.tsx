@@ -40,9 +40,9 @@ function BuilderContent() {
         } else {
           setCalcData({
             id: data.id,
-            title: data.title,
-            inputs: data.inputs || [],
-            outputs: data.outputs || [],
+            title: data.title || 'Terminale di Stima',
+            inputs: data.inputs || data.config?.inputs || [],
+            outputs: data.outputs || data.config?.outputs || [],
             primaryColor: data.primary_color || '#4D7CFE',
             enableLeadGate: data.enable_lead_gate ?? true,
             privacyPolicyUrl: data.privacy_policy_url || '',
@@ -66,19 +66,24 @@ function BuilderContent() {
     setSaving(true);
     setErrorMessage(null);
 
-    const payload = {
+    // Mappa identica allo schema rilevato nelle tue colonne
+    const payload: Record<string, any> = {
       user_id: userId,
       title: data.title,
       inputs: data.inputs,
       outputs: data.outputs,
+      config: {
+        inputs: data.inputs,
+        outputs: data.outputs
+      },
       primary_color: data.primaryColor,
-      enable_lead_gate: data.enableLeadGate,
-      privacy_policy_url: data.privacyPolicyUrl,
-      privacy_text: data.privacyText,
-      post_submit_action: data.postSubmitAction,
-      redirect_url: data.redirectUrl,
-      webhook_url: data.webhookUrl,
-      is_published: data.isPublished
+      enable_lead_gate: Boolean(data.enableLeadGate),
+      privacy_policy_url: data.privacyPolicyUrl || '',
+      privacy_text: data.privacyText || 'Dichiaro di aver letto e accetto la',
+      post_submit_action: data.postSubmitAction || 'unlock',
+      redirect_url: data.redirectUrl || '',
+      webhook_url: data.webhookUrl || '',
+      is_published: Boolean(data.isPublished)
     };
 
     try {
@@ -114,7 +119,7 @@ function BuilderContent() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <span className="w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
         <span className="font-mono text-xs uppercase tracking-widest text-faint">
-          Caricamento Editor…
+          Inizializzazione Editor…
         </span>
       </div>
     );
