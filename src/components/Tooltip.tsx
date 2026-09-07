@@ -8,7 +8,7 @@ interface TooltipProps {
   children?: React.ReactNode;
 }
 
-export default function Tooltip({ content, example, children }: TooltipProps) {
+export default function Tooltip({ content, example }: TooltipProps) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -22,7 +22,7 @@ export default function Tooltip({ content, example, children }: TooltipProps) {
           e.stopPropagation();
           setVisible(!visible);
         }}
-        className="w-4 h-4 rounded-full bg-white/10 hover:bg-accent text-slate-300 hover:text-white flex items-center justify-center text-[10px] font-mono font-bold transition cursor-help border border-white/10"
+        className="w-4 h-4 rounded-full bg-white/10 hover:bg-accent text-slate-300 hover:text-white flex items-center justify-center text-[10px] font-mono font-bold transition cursor-pointer border border-white/10 focus:outline-none"
         aria-label="Informazioni sul campo"
       >
         ?

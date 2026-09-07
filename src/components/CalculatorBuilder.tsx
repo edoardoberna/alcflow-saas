@@ -182,7 +182,7 @@ export default function CalculatorBuilder({
         id: nextId,
         variable: `risultato_${nextIdx}`,
         label: `Risultato ${nextIdx}`,
-        formula: inputs[0]?.variable || '0',
+        formula: inputs[0]?.variable ? `${inputs[0].variable} * 50` : '0',
         prefix: '€',
         highlight: false
       }
@@ -199,6 +199,17 @@ export default function CalculatorBuilder({
 
   const handleRemoveOutput = (index: number) => {
     setOutputs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Funzioni di aiuto rapido per le formule (Punto 2)
+  const applyFormulaTemplate = (outputIndex: number, templateFormula: string) => {
+    handleUpdateOutput(outputIndex, 'formula', templateFormula);
+  };
+
+  const insertVariableIntoFormula = (outputIndex: number, varName: string) => {
+    const currentFormula = outputs[outputIndex]?.formula || '';
+    const updated = currentFormula ? `${currentFormula} + ${varName}` : varName;
+    handleUpdateOutput(outputIndex, 'formula', updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,6 +264,10 @@ export default function CalculatorBuilder({
     setTimeout(() => setCopiedSnippet(false), 2000);
   };
 
+  // Prima variabile disponibile per i template dinamici
+  const primaryVar = inputs[0]?.variable || 'valore';
+  const secondaryVar = inputs[1]?.variable || 'ore';
+
   return (
     <div className="w-full">
       {/* Barra di Navigazione Rapida Superiore */}
@@ -284,7 +299,7 @@ export default function CalculatorBuilder({
             <button
               type="button"
               onClick={() => setShowHelpBanner(false)}
-              className="text-slate-400 hover:text-white font-mono text-xs"
+              className="text-slate-400 hover:text-white font-mono text-xs cursor-pointer"
             >
               ✕
             </button>
@@ -295,8 +310,8 @@ export default function CalculatorBuilder({
               Scegli cosa fa muovere il visitatore (es. cursore per i metri quadri o le ore). A ciascuno assegna un nome breve in minuscolo (la "variabile").
             </div>
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-              <span className="font-bold text-accent-hi block mb-1">2. Scrivi la Formula</span>
-              Usa le variabili per calcolare il totale, come faresti su una normale calcolatrice: ad esempio <code className="text-mint font-mono">pagine * 100</code>.
+              <span className="font-bold text-accent-hi block mb-1">2. Scegli la Formula</span>
+              Puoi cliccare sui nostri template pronti oppure combinare le variabili cliccandoci sopra (es. <code className="text-mint font-mono">{primaryVar} * 100</code>).
             </div>
             <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
               <span className="font-bold text-accent-hi block mb-1">3. Raccogli i Lead</span>
@@ -563,21 +578,9 @@ export default function CalculatorBuilder({
             </div>
           )}
 
-          {/* TAB 2: RISULTATI (FORMULE) */}
+          {/* TAB 2: RISULTATI (FORMULE CON TEMPLATE IN 1 CLICK) */}
           {activeTab === 'outputs' && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#0C1019] border border-white/10 text-xs text-slate-300 leading-relaxed flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-white">Variabili disponibili per i calcoli:</span>{' '}
-                  <code className="text-cyan font-mono font-semibold">
-                    {inputs.map((i) => i.variable).filter(Boolean).join(', ') || 'nessuna'}
-                  </code>
-                </div>
-                <Tooltip
-                  content="Queste sono le parole che puoi inserire nella formula. Il calcolatore le sostituirà istantaneamente con il numero scelto dall'utente."
-                />
-              </div>
-
+            <div className="space-y-5">
               {outputs.map((out, idx) => {
                 const validation = formulaValidation[out.id || out.variable];
                 return (
@@ -631,12 +634,72 @@ export default function CalculatorBuilder({
                       </div>
                     </div>
 
+                    {/* SEZIONE PUNTO 2: TEMPLATE E VARIABILI CLICCABILI */}
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                          Modelli di Formule Veloci (1-Click):
+                        </span>
+                      </div>
+
+                      {/* Bottoni Template Rapidi */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => applyFormulaTemplate(idx, `${primaryVar} * 50`)}
+                          className="px-2.5 py-1 text-[11px] rounded-md bg-white/5 hover:bg-white/15 text-slate-200 border border-white/10 font-mono transition cursor-pointer"
+                        >
+                          Moltiplicazione ({primaryVar} * 50)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormulaTemplate(idx, `500 + (${secondaryVar} * 40)`)}
+                          className="px-2.5 py-1 text-[11px] rounded-md bg-white/5 hover:bg-white/15 text-slate-200 border border-white/10 font-mono transition cursor-pointer"
+                        >
+                          Fisso + Ore (500 + {secondaryVar} * 40)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormulaTemplate(idx, `(${primaryVar} * 100) / 12`)}
+                          className="px-2.5 py-1 text-[11px] rounded-md bg-white/5 hover:bg-white/15 text-slate-200 border border-white/10 font-mono transition cursor-pointer"
+                        >
+                          Rata 12 Mesi (/ 12)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormulaTemplate(idx, `${primaryVar} > 10 ? ${primaryVar} * 80 : ${primaryVar} * 100`)}
+                          className="px-2.5 py-1 text-[11px] rounded-md bg-white/5 hover:bg-white/15 text-slate-200 border border-white/10 font-mono transition cursor-pointer"
+                        >
+                          Sconto se &gt; 10
+                        </button>
+                      </div>
+
+                      {/* Variabili Cliccabili */}
+                      <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-1.5 text-xs">
+                        <span className="text-slate-400 font-mono text-[10px] uppercase mr-1">
+                          Clicca per inserire:
+                        </span>
+                        {inputs.map((inp) => (
+                          <button
+                            key={inp.variable || inp.id}
+                            type="button"
+                            onClick={() => insertVariableIntoFormula(idx, inp.variable)}
+                            className="px-2 py-0.5 rounded bg-accent/15 hover:bg-accent/30 text-accent-hi font-mono text-[11px] border border-accent/30 transition cursor-pointer"
+                            title={`Aggiunge + ${inp.variable} alla formula`}
+                          >
+                            +{inp.variable}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Campo Formula effettivo con Validazione */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="flex items-center font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                          Formula Matematica
+                          Formula Matematica Finale
                           <Tooltip
-                            content="L'operazione matematica. Usa +, -, *, / e le parentesi. Puoi anche usare condizioni: es. (ore > 10 ? ore * 40 : ore * 50)"
+                            content="La formula calcolata. Puoi modificarla liberamente a mano o usare i template sopra."
                             example="(pagine * 120) + (ore * 45)"
                           />
                         </label>
